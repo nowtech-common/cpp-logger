@@ -191,6 +191,28 @@ logfreertosstmhal.h    |An STM HAL UART device|yes         |An interface for ST
 logcmsisswo.h          |CMSIS SWO       |no                |An interface for CMSIS SWO making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
 logfreertoscmsisswo.h  |CMSIS SWO       |no                |An interface for CMSIS SWO under FreeR= TOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
 
+## Compiling
+
+The compiler must support the C++14 standard. The library was taken from a set of libraries. Maybe some HAL-related umbrella header file is missing, which is easy to reconstruct.
+
+Compulsory files are:
+
+  - cmsis_os_utils.cpp
+  - cmsis_os_utils.h
+  - log.cpp
+  - log.h
+  - logutil.cpp
+  - logutil.h
+
+One of these headers, and possibly the related .cpp is also needed:
+  - logcmsisswo.h
+  - logfreertoscmsisswo.cpp
+  - logfreertoscmsisswo.h
+  - logfreertosstmhal.cpp
+  - logfreertosstmhal.h
+  - lognop.h
+  - logstmhal.h
+
 ## TODO
 
   - Static entry point using a static variable stored in the

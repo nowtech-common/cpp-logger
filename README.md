@@ -9,6 +9,10 @@ parameters. **This holds for all the tasks using the log system.** For
 low stack usage, avoid many parameters. For small compiled size, avoid
 many parameter footprints (i.e. avoid many template instantiations).
 
+The library reserves some buffers and a queue during construction, and makes
+small heap allocations during thread / log app registrations. After it, no heap
+modification occurs, so it will be safe to use from embedded code.
+
 The code was written to possibly conform MISRA C++ and High-Integrity
 C++.
 
@@ -234,4 +238,5 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     and functional versions.
   - Eliminate std::map
   - Fix the lockup bug happening under extreme loads.
+  - Examine the possibility of introducing << operators.
   - Remove unnecessary dependencies from FreeRTOS. This was not an issue for us, as all our projects using the log library used also FreeRTOS.

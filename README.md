@@ -196,7 +196,7 @@ logfreertoscmsisswo.h  |CMSIS SWO       |no                |An interface for C
 The compiler must support the C++14 standard. The library was taken from a set of libraries. Maybe some HAL-related umbrella header file is missing, which is easy to reconstruct.
 
 Compulsory files are:
-
+  - BanCopyMove.h
   - cmsis_os_utils.cpp
   - cmsis_os_utils.h
   - log.cpp
@@ -213,6 +213,19 @@ One of these headers, and possibly the related .cpp is also needed:
   - lognop.h
   - logstmhal.h
 
+Some interfaces need HAL callbacks. `logfreertoscmsisswo.h` needs such a function:
+
+```cpp
+extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  if(huart == &huart3) {
+    nowtech::LogFreeRtosCmsisSwo::transmitFinished();
+  }
+  else { // nothing to do
+  }
+}```
+
+`logfreertosstmhal.h` needs a similar with the corresponding class name.
+
 ## TODO
 
   - Static entry point using a static variable stored in the
@@ -220,3 +233,4 @@ One of these headers, and possibly the related .cpp is also needed:
     and functional versions.
   - Eliminate std::map
   - Fix the lockup bug happening under extreme loads.
+  - Remove unnecessary dependencies from FreeRTOS. This was not an issue for us, as all our projects using the log library used also FreeRTOS.

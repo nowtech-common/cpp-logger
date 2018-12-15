@@ -222,7 +222,8 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   }
   else { // nothing to do
   }
-}```
+}
+```
 
 `logfreertosstmhal.h` needs a similar with the corresponding class name.
 

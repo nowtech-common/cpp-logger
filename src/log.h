@@ -66,19 +66,7 @@ namespace nowtech {
   /// Regural calls like Log::send("stuff to log") will always have effect.
   enum class LogApp : uint8_t {
     cSystem,
-    cWatchdog,
-    cWatchdogDetail,
-    cSelfTest,
-    cConnection,
-    cConnectionDetail,
-    cStateMachine,
-    cHeadDrive,
-    cPersistence,
-    cPackets,
-    cAnalogGuard,
-    cAnalogGuardDetail,
-    cBlackBox,
-    cBlackBoxDetail
+    cWatchdog
   };
 
   /// Configuration struct with default values for general usage.

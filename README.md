@@ -239,4 +239,6 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   - Eliminate std::map
   - Fix the lockup bug happening under extreme loads.
   - Examine the possibility of introducing << operators.
-  - Remove unnecessary dependencies from FreeRTOS. This was not an issue for us, as all our projects using the log library used also FreeRTOS.
+  - Fix FreeRTOS isInterrupt
+  - Make Log::registerCurrentTask thread-safe by implementing OS-specific lock and unlock in OsInterface
+  - Introduce uint64_t and int64_t

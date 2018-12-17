@@ -23,7 +23,6 @@
 
 #include "log.h"
 #include "logutil.h"
-#include "stm32hal.h"
 
 void nowtech::Chunk::push(char const mChar) noexcept {
   mChunk[mIndex++] = mChar;
@@ -60,13 +59,11 @@ constexpr char nowtech::Log::cUnknownApplicationName[8];
 
 nowtech::Log *nowtech::Log::sInstance;
 
-void nowtech::Log::transmitterThreadFunction() noexcept
-{
+void nowtech::Log::transmitterThreadFunction() noexcept {
   // we assume all the buffers are valid
   CircularBuffer circularBuffer(mOsInterface, mConfig.circularBufferLength, mChunkSize);
   TransmitBuffers transmitBuffers(mOsInterface, mConfig.transmitBufferLength, mChunkSize);
-  while(true)
-  {
+  while(mKeepRunning.load()) {
     // At this point the transmitBuffers must have free space for a chunk
     if(!transmitBuffers.hasActiveTask()) {
       if(circularBuffer.isEmpty()) {
@@ -151,8 +148,22 @@ void nowtech::Log::doRegisterCurrentTask() noexcept {
   }
 }
 
+void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept {
+  if(mNextTaskId != cIsrTaskId) {
+    mOsInterface.registerThreadName(aTaskName);
+    uint32_t taskHandle = mOsInterface.getCurrentThreadId();
+    auto found = mTaskIds.find(taskHandle);
+    if(found == mTaskIds.end()) {
+      mTaskIds[taskHandle] = mNextTaskId++;
+      doSend("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
+    }
+    else { // nothing to do
+    }
+  }
+}
+
 nowtech::TaskIdType nowtech::Log::getCurrentTaskId() const noexcept {
-  if(stm32utils::isInterrupt()) {
+  if(InterruptInformation::isInterrupt()) {
     return cIsrTaskId;
   }
   else {
@@ -169,7 +180,7 @@ bool nowtech::Log::startSend(Chunk &aChunk) noexcept {
       append(aChunk, cSeparatorNormal);
     }
     else if(mConfig.taskRepresentation == LogConfig::TaskRepresentation::cName) {
-      if(stm32utils::isInterrupt()) {
+      if(InterruptInformation::isInterrupt()) {
         append(aChunk, cIsrTaskName);
       }
       else {

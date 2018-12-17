@@ -25,13 +25,15 @@
 #define NOWTECH_LOG_INCLUDED
 
 #include "BanCopyMove.h"
-#include "stm32utils.h"
-#include <type_traits>
+#include "interrupt.h"
 #include <cstdint>
+#include <type_traits>
 #include <atomic>
 #include <limits>
 #include <cmath>
 #include <map>
+
+#include<iostream>
 
 namespace nowtech {
 
@@ -204,6 +206,15 @@ namespace nowtech {
 
     LogSizeType getChunkSize() const noexcept {
       return mChunkSize;
+    }
+   
+    /// Only needed in implementations without an OS-supported task name and task ID exceeding uint32_t.
+    /// This function does nothing.
+    /// Registers the given name and an artificial ID in a local map.
+    /// This function MUST NOT be called from user code.
+    /// void Log::registerCurrentTask(char const * const aTaskName) may call it only.
+    /// @param aTaskName Task name to register.
+    virtual void registerThreadName(char const * const) const noexcept {
     }
 
     /// Returns a textual representation of the given thread ID.
@@ -428,6 +439,9 @@ namespace nowtech {
     /// locking, time and thread management.
     LogOsInterface &mOsInterface;
 
+    /// Can be used to shut off the transmitter thread, if any
+    std::atomic<bool> mKeepRunning = true;
+
     /// The user-defined configuration values for message header and number
     /// rendering and else.
     LogConfig const &mConfig;
@@ -455,12 +469,23 @@ namespace nowtech {
     Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexcept;
 
     /// Does nothing, because this object is not intended to be destroyed.
-    ~Log() noexcept = default;
+    ~Log() noexcept {
+      mKeepRunning.store(false);
+    }
 
     /// Registers the current task if not already present. It can register
     /// at most 255 tasks. All others will be handled as one.
+    /// NOTE: this method is not thread-safe.
     static void registerCurrentTask() noexcept {
       sInstance->doRegisterCurrentTask();
+    }
+
+    /// Registers the current task if not already present. It can register
+    /// at most 255 tasks. All others will be handled as one.
+    /// NOTE: this method is not thread-safe.
+    /// @param aTaskName Task name to use, when the osInterface supports it.
+    static void registerCurrentTask(char const * const aTaskName) noexcept {
+      sInstance->doRegisterCurrentTask(aTaskName);
     }
 
     /// Registers the current log application
@@ -561,6 +586,7 @@ private:
     }
 
     void doRegisterCurrentTask() noexcept;
+    void doRegisterCurrentTask(char const * const) noexcept;
 
     /// Defined in .cpp to allow stub
     TaskIdType getCurrentTaskId() const noexcept;
@@ -600,7 +626,7 @@ private:
     bool startSend(Chunk &aChunk, LogApp aApp) noexcept;
 
     bool startSendNoHeader() noexcept {
-      if(!mConfig.logFromIsr && stm32utils::isInterrupt()) {
+      if(!mConfig.logFromIsr && InterruptInformation::isInterrupt()) {
         return false;
       }
       else {

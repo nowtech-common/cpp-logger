@@ -214,7 +214,7 @@ namespace nowtech {
     /// This function MUST NOT be called from user code.
     /// void Log::registerCurrentTask(char const * const aTaskName) may call it only.
     /// @param aTaskName Task name to register.
-    virtual void registerThreadName(char const * const) const noexcept {
+    virtual void registerThreadName(char const * const) noexcept {
     }
 
     /// Returns a textual representation of the given thread ID.
@@ -258,6 +258,14 @@ namespace nowtech {
     }
 
     virtual void startRefreshTimer(std::atomic<bool> *aRefreshFlag) noexcept {
+    }
+
+    /// Calls az OS-specific lock to acquire a critical section, if implemented
+    virtual void lock() noexcept {
+    }
+
+    /// Calls az OS-specific lock to release critical section, if implemented
+    virtual void unlock() noexcept {
     }
   };
 
@@ -402,7 +410,11 @@ namespace nowtech {
   /// a limited number parameter type combinations, and possibly only a small
   /// number of parameters.
   class Log final : public BanCopyMove {
-   private:
+  public:
+    /// Output for unknown LogApp parameter
+    static constexpr char cUnknownApplicationName[8] = "UNKNOWN";
+
+  private:
     /// The character to use instead of the thread ID if it is unknown.
     static constexpr char cIsrTaskName = '?';
 
@@ -425,9 +437,6 @@ namespace nowtech {
     static constexpr char cDigit2char[16] = {
       '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
     };
-
-    /// Output for unknown LogApp parameter
-    static constexpr char cUnknownApplicationName[8] = "UNKNOWN";
 
     /// Artificial task ID for interrupts.
     static constexpr TaskIdType cIsrTaskId = std::numeric_limits<TaskIdType>::max();
@@ -475,14 +484,14 @@ namespace nowtech {
 
     /// Registers the current task if not already present. It can register
     /// at most 255 tasks. All others will be handled as one.
-    /// NOTE: this method is not thread-safe.
+    /// NOTE: this method locks to inhibit concurrent access of methods with the same name.
     static void registerCurrentTask() noexcept {
       sInstance->doRegisterCurrentTask();
     }
 
     /// Registers the current task if not already present. It can register
     /// at most 255 tasks. All others will be handled as one.
-    /// NOTE: this method is not thread-safe.
+    /// NOTE: this method locks to inhibit concurrent access of methods with the same name.
     /// @param aTaskName Task name to use, when the osInterface supports it.
     static void registerCurrentTask(char const * const aTaskName) noexcept {
       sInstance->doRegisterCurrentTask(aTaskName);

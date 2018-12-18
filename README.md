@@ -240,5 +240,4 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   - Fix the lockup bug happening under extreme loads.
   - Examine the possibility of introducing << operators.
   - Fix FreeRTOS isInterrupt
-  - Make Log::registerCurrentTask thread-safe by implementing OS-specific lock and unlock in OsInterface
   - Introduce uint64_t and int64_t

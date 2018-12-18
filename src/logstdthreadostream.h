@@ -25,6 +25,7 @@
 #define NOWTECH_LOG_STD_THREAD_OSTREAM_INCLUDED
 
 #include "log.h"
+#include <mutex>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -39,7 +40,7 @@ namespace nowtech {
   /// Class implementing log interface for FreeRTOS and STM HAL as STM32CubeMX
   /// provides them.
   class LogStdThreadOstream final : public LogOsInterface {
-    static constexpr uint32_t cInitialGivenTaskId = 1u;
+    static constexpr uint32_t cInvalidGivenTaskId = 0u;
     static constexpr uint32_t cEnqueuePollDelay = 1u;
 
     struct NameId {
@@ -81,7 +82,7 @@ namespace nowtech {
     class FreeRtosTimer final : public BanCopyMove {
       uint32_t                     mTimeout;
       std::function<void()>        mLambda;
-      std::mutex mMutex;
+      std::mutex                   mMutex;
       std::unique_lock<std::mutex> mLock;
       std::condition_variable      mConditionVariable;
       std::thread                  mThread;
@@ -118,7 +119,7 @@ namespace nowtech {
 
     std::map<std::thread::id, NameId> mTaskNamesIds;
 
-    uint32_t mNextGivenTaskId = cInitialGivenTaskId;
+    uint32_t mNextGivenTaskId = cInvalidGivenTaskId + 1u;
 
     /// True if the other transmission buffer is being transmitted. This is
     /// defined here because OS-specific functionality is here.
@@ -127,6 +128,8 @@ namespace nowtech {
     /// True if the partially filled buffer should be sent. This is
     /// defined here because OS-specific functionality is here.
     std::atomic<bool> *mRefreshNeeded;
+
+    std::recursive_mutex         mApiMutex;
 
   public:
     /// Sets parameters and creates the mutex for locking.
@@ -143,6 +146,7 @@ namespace nowtech {
     virtual ~LogStdThreadOstream() {
       mTransmitterThread->join();
       delete mTransmitterThread;
+      mOutput.flush();
     }
 
     /// Registers the given name and an artificial ID in a local map.
@@ -151,25 +155,20 @@ namespace nowtech {
     /// @param aTaskName Task name to register.
     virtual void registerThreadName(char const * const aTaskName) noexcept {
       NameId nameId { std::string(aTaskName), mNextGivenTaskId };
-std::cout << aTaskName << ' ' << ++mNextGivenTaskId << std::endl;
       ++mNextGivenTaskId;
       mTaskNamesIds.insert(std::pair(std::this_thread::get_id(), nameId));
     }
 
     /// Returns the task name. This is a dummy and inefficient implementation,
-    /// but normally runs only once during registering the currtent thread.
+    /// but normally runs only once during registering the current thread.
     /// Note, the returned pointer is valid only as long as this object lives.
-    virtual const char * const getThreadName(uint32_t const aHandle) noexcept;
+    virtual char const * const getThreadName(uint32_t const aHandle) noexcept;
 
     /// Returns the current task name.
-    virtual const char * const getCurrentThreadName() noexcept {
-      return mTaskNamesIds[std::this_thread::get_id()].name.c_str();
-    }
+    virtual char const * const getCurrentThreadName() noexcept;
 
-    /// Returns the FreeRTOS-specific thread ID.
-    virtual uint32_t getCurrentThreadId() noexcept {
-      return mTaskNamesIds[std::this_thread::get_id()].id;
-    }
+    /// Returns an artificial thread ID for registered threads, cInvalidGivenTaskId otherwise;
+    virtual uint32_t getCurrentThreadId() noexcept;
 
     /// Returns the std::chrono::steady_clock tick count converted into ms and truncated to 32 bits.
     virtual uint32_t getLogTime() const noexcept {
@@ -187,6 +186,16 @@ std::cout << aTaskName << ' ' << ++mNextGivenTaskId << std::endl;
     /// Enqueues the chunks, possibly blocking if the queue is full.
     virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept {
       mQueue.send(aChunkStart, aBlocks);
+/*LogSizeType length;
+      char buffer[mChunkSize];
+      for(length = 0u; length < mChunkSize - 1u; ++length) {
+        buffer[length] = aChunkStart[length + 1u];
+        if(aChunkStart[length + 1] == '\n') {
+          ++length;
+          break;
+        }
+      }
+mOutput.write(buffer, length);*/
     }
 
     /// Removes the oldest chunk from the queue.
@@ -204,7 +213,7 @@ std::cout << aTaskName << ' ' << ++mNextGivenTaskId << std::endl;
     /// @param length length of data
     /// @param aProgressFlag address of flag to be set on transmission end.
     virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept {
-//      mOutput.write(aBuffer, aLength);
+      mOutput.write(aBuffer, aLength);
       aProgressFlag->store(false);
     }
 
@@ -217,8 +226,18 @@ std::cout << aTaskName << ' ' << ++mNextGivenTaskId << std::endl;
     /// Sets the flag.
     void refreshNeeded() noexcept {
       mRefreshNeeded->store(true);
+      mOutput.flush();
     }
 
+    /// Calls az OS-specific lock to acquire a critical section, if implemented
+    virtual void lock() noexcept {
+      mApiMutex.lock();
+    }
+
+    /// Calls az OS-specific lock to release critical section, if implemented
+    virtual void unlock() noexcept {
+      mApiMutex.unlock();
+    }
   };
 
 } //namespace nowtech

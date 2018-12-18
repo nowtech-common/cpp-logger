@@ -5,19 +5,19 @@
 
 // clang++ -std=c++17 -Isrc src/log.cpp src/logstdthreadostream.cpp src/logutil.cpp src/nointerrupt.cpp test/test-stdthreadostream.cpp -lpthread -g3 -Og -o test-stdthreadostream
 
-constexpr int32_t threadCount = 1;
+constexpr int32_t threadCount = 10;
 
 char names[10][10] = {
-  "thread 0",
-  "thread 1",
-  "thread 2",
-  "thread 3",
-  "thread 4",
-  "thread 5",
-  "thread 6",
-  "thread 7",
-  "thread 8",
-  "thread 9"
+  "thread_0",
+  "thread_1",
+  "thread_2",
+  "thread_3",
+  "thread_4",
+  "thread_5",
+  "thread_6",
+  "thread_7",
+  "thread_8",
+  "thread_9"
 };
 
 void delayedLog(int32_t n) {
@@ -32,6 +32,8 @@ int main() {
   std::thread threads[threadCount];
   
   nowtech::LogConfig logConfig;
+  logConfig.taskRepresentation = nowtech::LogConfig::TaskRepresentation::cName;
+  logConfig.refreshPeriod      = 200u;
   nowtech::LogStdThreadOstream osInterface(std::cout, logConfig);
   nowtech::Log log(osInterface, logConfig);
   Log::registerApp(nowtech::LogApp::cSystem, "system");

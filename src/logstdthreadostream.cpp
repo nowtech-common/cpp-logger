@@ -76,3 +76,27 @@ const char * const nowtech::LogStdThreadOstream::getThreadName(uint32_t const aH
   }
   return result;
 }
+
+char const * const nowtech::LogStdThreadOstream::getCurrentThreadName() noexcept {
+  char const *result;
+  auto found = mTaskNamesIds.find(std::this_thread::get_id());
+  if(found != mTaskNamesIds.end()) {
+    result = found->second.name.c_str();
+  }
+  else {
+    result = Log::cUnknownApplicationName;
+  }
+  return result;
+}
+
+uint32_t nowtech::LogStdThreadOstream::getCurrentThreadId() noexcept {
+  uint32_t result;
+  auto found = mTaskNamesIds.find(std::this_thread::get_id());
+  if(found != mTaskNamesIds.end()) {
+    result = found->second.id;
+  }
+  else {
+    result = cInvalidGivenTaskId;
+  }
+  return result;
+}

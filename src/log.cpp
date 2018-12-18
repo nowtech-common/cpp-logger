@@ -54,8 +54,8 @@ constexpr nowtech::LogFormat nowtech::LogConfig::cX4;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX6;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX8;
 
-constexpr char nowtech::Log::cDigit2char[16];
 constexpr char nowtech::Log::cUnknownApplicationName[8];
+constexpr char nowtech::Log::cDigit2char[16];
 
 nowtech::Log *nowtech::Log::sInstance;
 
@@ -136,6 +136,7 @@ nowtech::Log::Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexce
 }
 
 void nowtech::Log::doRegisterCurrentTask() noexcept {
+  mOsInterface.lock();
   if(mNextTaskId != cIsrTaskId) {
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
@@ -146,9 +147,11 @@ void nowtech::Log::doRegisterCurrentTask() noexcept {
     else { // nothing to do
     }
   }
+  mOsInterface.unlock();
 }
 
 void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept {
+  mOsInterface.lock();
   if(mNextTaskId != cIsrTaskId) {
     mOsInterface.registerThreadName(aTaskName);
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
@@ -160,6 +163,7 @@ void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept 
     else { // nothing to do
     }
   }
+  mOsInterface.unlock();
 }
 
 nowtech::TaskIdType nowtech::Log::getCurrentTaskId() const noexcept {

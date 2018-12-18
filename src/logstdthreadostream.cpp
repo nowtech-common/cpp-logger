@@ -26,7 +26,8 @@
 void nowtech::LogStdThreadOstream::FreeRtosQueue::send(char const * const aChunkStart, bool const aBlocks) noexcept {
   bool success;
   do {
-    success = mQueue.try_enqueue_bulk(aChunkStart, mBlockSize);
+// TODO get from freelist, copy, put into queue
+//    success = mQueue.bounded_push(payload);
     if(!success) {
       std::this_thread::sleep_for(std::chrono::milliseconds(cEnqueuePollDelay));
     }
@@ -41,9 +42,14 @@ bool nowtech::LogStdThreadOstream::FreeRtosQueue::receive(char * const aChunkSta
   if(mConditionVariable.wait_for(mLock, std::chrono::milliseconds(mPauseLength)) == std::cv_status::timeout) {
     result = false;
   }
-  else { // We try to utilize our constant block size and hope the best
-    size_t count = mQueue.try_dequeue_bulk(aChunkStart, mBlockSize);
-    result = count == mBlockSize;
+  else {
+// TODO get from queue copy, put into freelist
+//    result = mQueue.pop(payload);
+    if(result) {
+      payload.copy(aChunkStart, mBlockSize);
+    }
+    else { // nothing to do
+    }
   }
   return result;
 }

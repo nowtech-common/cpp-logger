@@ -30,10 +30,11 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <string>
 #include <ostream>
 #include <functional>
 #include <condition_variable>
-#include "concurrentqueue.h"
+#include <boost/lockfree/queue.hpp>
 
 namespace nowtech {
 
@@ -58,19 +59,27 @@ namespace nowtech {
 
     /// Uses moodycamel::ConcurrentQueue to simulate a FreeRTOS queue.
     class FreeRtosQueue final : public BanCopyMove {
-      moodycamel::ConcurrentQueue<char> mQueue;
-      std::mutex mMutex;
-      std::unique_lock<std::mutex> mLock;
-      std::condition_variable mConditionVariable;
+      boost::lockfree::queue<char *> mQueue;
+      boost::lockfree::queue<char *> mFreeList;
+      std::mutex                     mMutex;
+      std::unique_lock<std::mutex>   mLock;
+      std::condition_variable        mConditionVariable;
 
       size_t const mBlockSize;
+      char        *mBuffer;
     
     public:
       /// First implementation, we assume we have plenty of memory.
       FreeRtosQueue(size_t const aBlockCount, size_t const aBlockSize) noexcept
-        : mQueue(aBlockCount * aBlockSize, 0, std::numeric_limits<TaskIdType>::max())
+        : mQueue(aBlockCount)
         , mLock(mMutex)
-        , mBlockSize(aBlockSize) {
+        , mBlockSize(aBlockSize) 
+        , mBuffer(new char[aBlockCount * aBlockSize]) {
+// TODO fill mFreeList with pointers into mBuffer
+      }
+
+      ~FreeRtosQueue() nmoexcept {
+        delete[] mBuffer;
       }
 
       void send(char const * const aChunkStart, bool const aBlocks) noexcept;

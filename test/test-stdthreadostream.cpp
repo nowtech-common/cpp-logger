@@ -46,7 +46,7 @@ char names[10][10] = {
 void delayedLog(int32_t n) {
   Log::registerCurrentTask(names[n]);
   Log::send(nowtech::LogApp::cSystem, n, ": ", 0);
-  for(int32_t i = 1; i < 13; ++i) {
+  for(int64_t i = 1; i < 13; ++i) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1 << i));
     Log::send(nowtech::LogApp::cSystem, n, ": ", LC::cX1, i);
   }
@@ -61,6 +61,12 @@ int main() {
   nowtech::LogStdThreadOstream osInterface(std::cout, logConfig);
   nowtech::Log log(osInterface, logConfig);
   Log::registerApp(nowtech::LogApp::cSystem, "system");
+
+  uint64_t const uint64 = 123456789012345;
+  int64_t const int64 = -123456789012345;
+
+  Log::registerCurrentTask("main");
+  Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
 
   for(int32_t i = 0; i < threadCount; ++i) {
     threads[i] = std::thread(delayedLog, i);

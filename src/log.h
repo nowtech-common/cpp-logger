@@ -158,9 +158,11 @@ namespace nowtech {
     LogFormat int8Format   = cDefault;
     LogFormat int16Format  = cDefault;
     LogFormat int32Format  = cDefault;
+    LogFormat int64Format  = cDefault;
     LogFormat uint8Format  = cDefault;
     LogFormat uint16Format = cDefault;
     LogFormat uint32Format = cDefault;
+    LogFormat uint64Format = cDefault;
     LogFormat floatFormat  = cD5;
     LogFormat doubleFormat = cD8;
 
@@ -530,9 +532,11 @@ namespace nowtech {
     /// - int8_t
     /// - int16_t
     /// - int32_t
+    /// - int64_t
     /// - uint8_t
     /// - uint16_t
     /// - uint32_t
+    /// - uint64_t
     /// - bool
     /// - float
     /// - double
@@ -669,6 +673,12 @@ private:
       else if(std::is_same<T, uint8_t>::value || std::is_same<T, uint16_t>::value || std::is_same<T, uint32_t>::value) {
         append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.mBase), aFormat.mFill);
       }
+      else if(std::is_same<T, int64_t>::value) {
+        append(aChunk, static_cast<int64_t>(aValue), static_cast<int64_t>(aFormat.mBase), aFormat.mFill);
+      }
+      else if(std::is_same<T, uint64_t>::value) {
+        append(aChunk, static_cast<uint64_t>(aValue), static_cast<uint64_t>(aFormat.mBase), aFormat.mFill);
+      }
       else if(std::is_same<T, float>::value || std::is_same<T, double>::value) {
         append(aChunk, static_cast<double>(aValue), aFormat.mFill);
       }
@@ -708,46 +718,62 @@ private:
       }
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mUint8Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint8Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint8_t const aValue) noexcept {
       append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint8Format.mBase), mConfig.uint8Format.mFill);
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mUint16Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint16Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint16_t const aValue) noexcept {
       append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint16Format.mBase), mConfig.uint16Format.mFill);
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mUint8Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint32Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint32_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<uint32_t>(mConfig.uint32Format.mBase), mConfig.uint32Format.mFill);
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mInt8Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint64Format
+    /// NOTE perhaps to be avoided in 32-bit embedded environment.
+    /// @param value number to convert and send
+    /// @return the return value of the last append(char const ch) call.
+    void append(Chunk &aChunk, uint64_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<uint64_t>(mConfig.uint32Format.mBase), mConfig.uint32Format.mFill);
+    }
+
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int8Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int8_t const aValue) noexcept {
       append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int8Format.mBase), mConfig.int8Format.mFill);
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mUint16Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int16Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int16_t const aValue) noexcept {
       append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int16Format.mBase), mConfig.int16Format.mFill);
     }
 
-    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.mUint8Format
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int32Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int32_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<int32_t>(mConfig.int32Format.mBase), mConfig.int32Format.mFill);
+    }
+
+    /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int64Format
+    /// NOTE perhaps to be avoided in 32-bit embedded environment.
+    /// @param value number to convert and send
+    /// @return the return value of the last append(char const ch) call.
+    void append(Chunk &aChunk, int64_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<int64_t>(mConfig.int64Format.mBase), mConfig.int64Format.mFill);
     }
 
     void append(Chunk &aChunk, float const aValue) noexcept {
@@ -762,7 +788,7 @@ private:
     /// const ch) to send it character by character. If the conversion fails
     /// (due to invalid base or too small buffer on stack) a # will be appended
     /// instead. For non-decimal numbers 0b or 0x is prepended.
-    /// T should be int32_t or uint32_t to avoid too many template instantiations.
+    /// T should be int32_t, uint32_t, int64_t or uint64_t to avoid too many template instantiations.
     /// @param value the number to convert
     /// @param base of the number system to use
     /// @param fill number of digits to use at least. Shorter numbers will be

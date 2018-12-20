@@ -112,10 +112,10 @@ Field | Possible values | Default value | Effect
 cD*n* |constant         |LogFormat(10, *n*)|Used for n-digit decimal output, where n can be 2-8.
 cX*n* |constant         |LogFormat(16, *n*)|Used for n-digit hexadecimal output, where *n* can be 2, 4, 6 or 8.
 `logFromIsr`|bool       |false          |If false, log calls from ISR are discarded. If true, logging from ISR works. However, in this mode the message may be truncated if the actual free space in the queue is too small.
-`chunkSize`|uint16_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\n' signs the end of a message.
-`queueLength`|uint16_t  |64             |Length of a queue in chunks. Increasing this value decreases the probability of message truncation when the queue stores more chunks.
-`circularBufferLength`|uint16_t|64      |Length of the circular buffer used for message sorting, measured also in chunks. This should have the same length as the queue, but one can experiment with it.
-`transmitBufferLength`|uint16_t|32      |Length of a buffer in the transmission double-buffer pair, in chunks. This should have half the length as the queue, but one can experiment with it. To be absolutely sure, this can have the same length as the queue, and the log system will also manage bursts of logs.
+`chunkSize`|uint32_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\n' signs the end of a message.
+`queueLength`|uint32_t  |64             |Length of a queue in chunks. Increasing this value decreases the probability of message truncation when the queue stores more chunks.
+`circularBufferLength`|uint32_t|64      |Length of the circular buffer used for message sorting, measured also in chunks. This should have the same length as the queue, but one can experiment with it.
+`transmitBufferLength`|uint32_t|32      |Length of a buffer in the transmission double-buffer pair, in chunks. This should have half the length as the queue, but one can experiment with it. To be absolutely sure, this can have the same length as the queue, and the log system will also manage bursts of logs.
 `appendStackBufferLength`|uint16_t|34   |Length of stack-reserved buffer for number to string conversion. The default value is big enough to hold 32 bit binary numbers. Can be reduced if no binary output is used and stack space is limited.
 `pauseLength`|uint32_t|100              |Length of a pause in ms during waiting for transmission of the other buffer or timeout while reading from the queue.
 `refreshPeriod`|uint32_t|100            |Length of the period used to wait for messages before transmitting a partially filled transmission buffer. The shorter the value the more prompt the display.
@@ -127,9 +127,11 @@ cX*n* |constant         |LogFormat(16, *n*)|Used for n-digit hexadecimal output,
 `int8Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `int16Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `int32Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
+`int64Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `uint8Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `uint16Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `uint32Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
+`uint64Format`|see LogFormat above|`cDefault`|Applies to numeric parameters of this type without preceding format parameter.
 `floatFormat`|see LogFormat above|`cD5`|Applies to numeric parameters of this type without preceding format parameter.
 `doubleFormat`|see LogFormat above|`cD8`|Applies to numeric parameters of this type without preceding format parameter.
 `alignSigned`|bool      |false          |If true, positive numbers will be prepended with a space to let them align negatives.
@@ -162,12 +164,19 @@ Type        |Printed value          |If it can be preceded by a LogFormat parame
 `uint8_t`   |formatted numeric value|yes
 `uint16_t`  |formatted numeric value|yes
 `uint32_t`  |formatted numeric value|yes
+`uint64_t`  |formatted numeric value|yes
 `int8_t`    |formatted numeric value|yes
 `int16_t`   |formatted numeric value|yes
 `int32_t`   |formatted numeric value|yes
+`int64_t`   |formatted numeric value|yes
 `float`     |formatted numeric value in exponential form|yes
 `double`    |formatted numeric value in exponential form|yes
 anything else, like pure `int`|`-=unknown=-`|no
+
+The logger was initially designed for 32-bit embedded environment with possible few binary-to-printed
+converter template function instantiation. From 8 to 32 bit numbers only the 32-bit versions will be created.
+Using 64-bit numbers makes the compiler create the 64-bit version(s) as well, depending on the signedness
+of the numbers to log.
 
 ## OS interface
 
@@ -194,7 +203,7 @@ logstmhal.h            |An STM HAL UART device|yes         |An interface for STM
 logfreertosstmhal.h    |An STM HAL UART device|yes         |An interface for STM HAL under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
 logcmsisswo.h          |CMSIS SWO       |not yet           |An interface for CMSIS SWO making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
 logfreertoscmsisswo.h  |CMSIS SWO       |not yet           |An interface for CMSIS SWO under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
-logstdthreadostream.h  |std::ostream    |not yet           |An interface using STL (even for threads) and boost::lockfree::queue. Thanks to this class, this implementation is lock-free.
+logstdthreadostream.h  |std::ostream    |not yet           |An interface using STL (even for threads) and boost::lockfree::queue. Thanks to this class, this implementation is lock-free. Note, this class does not own the std::ostream and does nothing but writes to it. Opening, closing etc is responsibility of the user code. The stream should NOT throw exceptions.
 
 ## Compiling
 
@@ -243,4 +252,3 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   - Fix the lockup bug happening under extreme loads.
   - Examine the possibility of introducing << operators.
   - Fix FreeRTOS isInterrupt.
-  - Introduce uint64_t and int64_t.

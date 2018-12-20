@@ -46,7 +46,7 @@ char names[10][10] = {
 void delayedLog(int32_t n) {
   Log::registerCurrentTask(names[n]);
   for(int32_t i = 0; i < 10; ++i) {
-    Log::send(nowtech::LogApp::cSystem, names[n], ": ", i);
+    Log::send(nowtech::LogApp::cSystem, n, ": ", i);
     std::this_thread::sleep_for(std::chrono::milliseconds(8 << i));
   }
 }

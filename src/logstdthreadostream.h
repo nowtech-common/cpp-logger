@@ -72,13 +72,18 @@ namespace nowtech {
       /// First implementation, we assume we have plenty of memory.
       FreeRtosQueue(size_t const aBlockCount, size_t const aBlockSize) noexcept
         : mQueue(aBlockCount)
+        , mFreeList(aBlockCount)
         , mLock(mMutex)
         , mBlockSize(aBlockSize) 
         , mBuffer(new char[aBlockCount * aBlockSize]) {
-// TODO fill mFreeList with pointers into mBuffer
+        char *ptr = mBuffer;
+        for(size_t i = 0; i < aBlockCount; ++i) {
+          mFreeList.bounded_push(ptr);
+          ptr += aBlockSize;
+        }
       }
 
-      ~FreeRtosQueue() nmoexcept {
+      ~FreeRtosQueue() noexcept {
         delete[] mBuffer;
       }
 
@@ -153,7 +158,6 @@ namespace nowtech {
     }
 
     virtual ~LogStdThreadOstream() {
-      mTransmitterThread->join();
       delete mTransmitterThread;
       mOutput.flush();
     }
@@ -191,20 +195,15 @@ namespace nowtech {
     virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept {
       mTransmitterThread = new std::thread([aLog, aThreadFunc]{aThreadFunc(aLog);});
     }
+    
+    /// Joins the thread.
+    virtual void joinTransmitterThread() noexcept {
+      mTransmitterThread->join();
+    };
 
     /// Enqueues the chunks, possibly blocking if the queue is full.
     virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept {
       mQueue.send(aChunkStart, aBlocks);
-/*LogSizeType length;
-      char buffer[mChunkSize];
-      for(length = 0u; length < mChunkSize - 1u; ++length) {
-        buffer[length] = aChunkStart[length + 1u];
-        if(aChunkStart[length + 1] == '\n') {
-          ++length;
-          break;
-        }
-      }
-mOutput.write(buffer, length);*/
     }
 
     /// Removes the oldest chunk from the queue.

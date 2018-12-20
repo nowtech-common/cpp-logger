@@ -235,10 +235,13 @@ namespace nowtech {
     virtual uint32_t getLogTime() const noexcept = 0;
 
     /// Creates a separate thread for sending log contents to the sink.
-    /// @param log the Log instance to be passed as parameter to the function
-    /// in the other parameter
+    /// @param log the Log instance to be passed as parameter to the function in the other parameter
     /// @param threadFunc the function to serve as the body of the new thread.
     virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept = 0;
+      
+    /// Joins the thread, if applicable to the OsInterface subclass. This des nothing.
+    virtual void joinTransmitterThread() noexcept {
+    };
 
     /// Enqueues the chunks, possibly blocking if the queue is full.
     virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept = 0;
@@ -480,6 +483,7 @@ namespace nowtech {
     /// Does nothing, because this object is not intended to be destroyed.
     ~Log() noexcept {
       mKeepRunning.store(false);
+      mOsInterface.joinTransmitterThread();
     }
 
     /// Registers the current task if not already present. It can register

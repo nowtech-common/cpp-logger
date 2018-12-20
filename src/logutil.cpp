@@ -92,7 +92,7 @@ nowtech::TransmitBuffers &nowtech::TransmitBuffers::operator<<(nowtech::Chunk co
 
 void nowtech::TransmitBuffers::transmitIfNeeded() noexcept {
   if(mChunkCount[mBufferToWrite] == 0) {
-      return;
+    return;
   }
   else {
     if(mChunkCount[mBufferToWrite] == mBufferLength) {
@@ -104,7 +104,6 @@ void nowtech::TransmitBuffers::transmitIfNeeded() noexcept {
     else { // nothing to do
     }
     if(mTransmitInProgress.load() == false && mRefreshNeeded.load() == true) {
-
       mTransmitInProgress.store(true);
       mOsInterface.transmit(mBuffers[mBufferToWrite], mIndex[mBufferToWrite], &mTransmitInProgress);
       mBufferToWrite = 1 - mBufferToWrite;

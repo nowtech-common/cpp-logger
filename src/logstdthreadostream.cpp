@@ -22,34 +22,67 @@
  */
 
 #include "logstdthreadostream.h"
-      
+
+#include <deque>
+std::mutex mtx;
+std::deque<char> q;
+
 void nowtech::LogStdThreadOstream::FreeRtosQueue::send(char const * const aChunkStart, bool const aBlocks) noexcept {
   bool success;
   do {
-// TODO get from freelist, copy, put into queue
-//    success = mQueue.bounded_push(payload);
-    if(!success) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(cEnqueuePollDelay));
-    }
-    else {
+/*    char *payload;
+    bool success = mFreeList.pop(payload);
+    if(success) {
+      std::copy(aChunkStart, aChunkStart + mBlockSize, payload);
+      mQueue.bounded_push(payload); // this should always succeed here
       mConditionVariable.notify_one();
-    }
+mtx.lock();
+std::cerr << "send: " << payload[0] << payload[1] << payload[2] << payload[3] << payload[4] << payload[5] <<
+payload[6] << payload[7] << std::endl;
+mtx.unlock();*/
+mtx.lock();
+//std::cerr << "send: [" << static_cast<uint16_t>(aChunkStart[0]) << ']' << aChunkStart[1] << aChunkStart[2] << aChunkStart[3] << aChunkStart[4] << aChunkStart[5] <<aChunkStart[6] << aChunkStart[7] << std::endl;
+for(int i = 0; i < mBlockSize; ++i) {
+  q.push_back(aChunkStart[i]);
+}
+mtx.unlock();
+      mConditionVariable.notify_one();
+success = true;
+/*    }
+    else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(cEnqueuePollDelay));
+    }*/
   } while(aBlocks && !success);
 }
 
 bool nowtech::LogStdThreadOstream::FreeRtosQueue::receive(char * const aChunkStart, uint32_t const mPauseLength) noexcept {
   bool result;
-  if(mConditionVariable.wait_for(mLock, std::chrono::milliseconds(mPauseLength)) == std::cv_status::timeout) {
+  if(q.size() < mBlockSize && mConditionVariable.wait_for(mLock, std::chrono::milliseconds(mPauseLength)) == std::cv_status::timeout) {
     result = false;
   }
   else {
-// TODO get from queue copy, put into freelist
-//    result = mQueue.pop(payload);
+/*    char *payload;
+    result = mQueue.pop(payload);
     if(result) {
-      payload.copy(aChunkStart, mBlockSize);
-    }
+      std::copy(payload, payload + mBlockSize, aChunkStart);
+      mFreeList.bounded_push(payload); // this should always succeed here
+mtx.lock();
+std::cerr << "recv: " << payload[0] << payload[1] << payload[2] << payload[3] << payload[4] << payload[5] <<
+payload[6] << payload[7] << std::endl;
+mtx.unlock();*/
+mtx.lock();
+if(q.size() >= mBlockSize) {
+result = true;
+for(int i = 0; i < mBlockSize; ++i) {
+  aChunkStart[i] = q.front();
+  q.pop_front();
+}
+//std::cerr << "recv: " << q.size() << " [" << static_cast<uint16_t>(aChunkStart[0]) << ']' << aChunkStart[1] << aChunkStart[2] << aChunkStart[3] << aChunkStart[4] << aChunkStart[5] <<aChunkStart[6] << aChunkStart[7] << std::endl;
+}
+mtx.unlock();
+/*    }
     else { // nothing to do
-    }
+    }*/
   }
   return result;
 }

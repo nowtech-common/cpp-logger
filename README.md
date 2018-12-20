@@ -241,3 +241,4 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   - Examine the possibility of introducing << operators.
   - Fix FreeRTOS isInterrupt
   - Introduce uint64_t and int64_t
+  - consider changing LogSizeType to 32 bits.

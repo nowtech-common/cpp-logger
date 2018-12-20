@@ -33,8 +33,6 @@
 #include <cmath>
 #include <map>
 
-#include<iostream>
-
 namespace nowtech {
 
   /// Type for all logging-related sizes
@@ -84,10 +82,13 @@ namespace nowtech {
     /// numbers, the numeric system info is discarded.
     static constexpr LogFormat cDefault = LogFormat(10, 0);
     static constexpr LogFormat cNone = LogFormat(0, 0);
+    static constexpr LogFormat cB4 = LogFormat(2, 4);
     static constexpr LogFormat cB8 = LogFormat(2, 8);
+    static constexpr LogFormat cB12 = LogFormat(2, 12);
     static constexpr LogFormat cB16 = LogFormat(2, 16);
     static constexpr LogFormat cB24 = LogFormat(2, 24);
     static constexpr LogFormat cB32 = LogFormat(2, 32);
+    static constexpr LogFormat cD1 = LogFormat(10, 1);
     static constexpr LogFormat cD2 = LogFormat(10, 2);
     static constexpr LogFormat cD3 = LogFormat(10, 3);
     static constexpr LogFormat cD4 = LogFormat(10, 4);
@@ -95,7 +96,9 @@ namespace nowtech {
     static constexpr LogFormat cD6 = LogFormat(10, 6);
     static constexpr LogFormat cD7 = LogFormat(10, 7);
     static constexpr LogFormat cD8 = LogFormat(10, 8);
+    static constexpr LogFormat cX1 = LogFormat(16, 1);
     static constexpr LogFormat cX2 = LogFormat(16, 2);
+    static constexpr LogFormat cX3 = LogFormat(16, 3);
     static constexpr LogFormat cX4 = LogFormat(16, 4);
     static constexpr LogFormat cX6 = LogFormat(16, 6);
     static constexpr LogFormat cX8 = LogFormat(16, 8);

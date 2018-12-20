@@ -147,6 +147,8 @@ namespace nowtech {
 
   public:
     /// Sets parameters and creates the mutex for locking.
+    /// The class does not own the stream and only writes to it.
+    /// Opening and closing it is user responsibility.
     /// @param aOutput the std::ostream to use
     /// @param aConfig config.
     LogStdThreadOstream(std::ostream &aOutput

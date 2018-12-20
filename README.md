@@ -192,8 +192,9 @@ Header name            |Target          |Extensively tested|Description
 lognop.h               |imaginary /dev/null|yes            |No-operation interface for no output at all. Can be used to appearantly shut down logging at compile time.
 logstmhal.h            |An STM HAL UART device|yes         |An interface for STM HAL making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
 logfreertosstmhal.h    |An STM HAL UART device|yes         |An interface for STM HAL under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
-logcmsisswo.h          |CMSIS SWO       |no                |An interface for CMSIS SWO making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
-logfreertoscmsisswo.h  |CMSIS SWO       |no                |An interface for CMSIS SWO under FreeR= TOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
+logcmsisswo.h          |CMSIS SWO       |not yet           |An interface for CMSIS SWO making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
+logfreertoscmsisswo.h  |CMSIS SWO       |not yet           |An interface for CMSIS SWO under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
+logstdthreadostream.h  |std::ostream    |not yet           |An interface using STL (even for threads) and boost::lockfree::queue. Thanks to this class, this implementation is lock-free.
 
 ## Compiling
 
@@ -208,14 +209,16 @@ Compulsory files are:
   - logutil.cpp
   - logutil.h
 
-One of these headers, and possibly the related .cpp is also needed:
-  - logcmsisswo.h
-  - logfreertoscmsisswo.cpp
-  - logfreertoscmsisswo.h
-  - logfreertosstmhal.cpp
-  - logfreertosstmhal.h
+One of these headers, and if present the related .cpp is also needed:
   - lognop.h
   - logstmhal.h
+  - logfreertosstmhal.h
+  - logfreertosstmhal.cpp
+  - logcmsisswo.h
+  - logfreertoscmsisswo.h
+  - logfreertoscmsisswo.cpp
+  - logstdthreadostream.h
+  - logstdthreadostream.cpp
 
 Some interfaces need HAL callbacks. `logfreertoscmsisswo.h` needs such a function:
 
@@ -229,16 +232,16 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 }
 ```
 
-`logfreertosstmhal.h` needs a similar with the corresponding class name.
+`logfreertosstmhal.h` needs a similar one with the corresponding class name.
 
 ## TODO
 
   - Static entry point using a static variable stored in the
     constructor. This would be the place to distinguish between stub
     and functional versions.
-  - Eliminate std::map
+  - Eliminate std::map.
   - Fix the lockup bug happening under extreme loads.
   - Examine the possibility of introducing << operators.
-  - Fix FreeRTOS isInterrupt
-  - Introduce uint64_t and int64_t
-  - consider changing LogSizeType to 32 bits.
+  - Fix FreeRTOS isInterrupt.
+  - Introduce uint64_t and int64_t.
+  - Consider changing LogSizeType to 32 bits.

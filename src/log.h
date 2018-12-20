@@ -36,7 +36,7 @@
 namespace nowtech {
 
   /// Type for all logging-related sizes
-  typedef uint16_t LogSizeType;
+  typedef uint32_t LogSizeType;
 
   /// Type for task ID in map.
   typedef uint8_t TaskIdType;

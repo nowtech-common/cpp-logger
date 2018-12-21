@@ -7,7 +7,7 @@ or larger MCUs.
 
 There are two log call flavours:
   - The all-purpose function call-like solution, but it heavily relies on variadic templates, stack usage may be in the order of kilobytes for many passed parameters. **This holds for all the tasks using the log system.** For low stack usage, avoid many parameters. For small compiled size, avoid many parameter footprints (i.e. avoid many template instantiations).
-  - The `std::ostream`-like solution, which uses minimal stack. It has only one limitation: it is unable to surpress the header like the other one's sendNoHeader call.
+  - The `std::ostream`-like solution, which uses minimal stack. It has only one limitation: it is unable to surpress the header like the other one's sendNoHeader call. However, the solution is easy and cheap: give the interested threads just as much extra stack space to be able to handle simple all-prupose calls. Discarding headers is interesting only if there are many simple homogeneous calls.
 
 The library reserves some buffers and a queue during construction, and makes
 small heap allocations during thread / log app registrations. After it, no heap
@@ -111,6 +111,7 @@ Field | Possible values | Default value | Effect
 `cBn` |constant         |LogFormat(2, *n*)|Used for n-bit binary output, where *n* can be 8, 16, 24 or 32.
 cD*n* |constant         |LogFormat(10, *n*)|Used for n-digit decimal output, where n can be 2-8.
 cX*n* |constant         |LogFormat(16, *n*)|Used for n-digit hexadecimal output, where *n* can be 2, 4, 6 or 8.
+allowShiftChainingCalls|bool|true       |True means reserving a buffer of 256 * chunkSize characters to let the `std::ostream`-like calls work. Setting it false will let such calls compile, but they won't do anything.
 `logFromIsr`|bool       |false          |If false, log calls from ISR are discarded. If true, logging from ISR works. However, in this mode the message may be truncated if the actual free space in the queue is too small.
 `chunkSize`|uint32_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\n' signs the end of a message.
 `queueLength`|uint32_t  |64             |Length of a queue in chunks. Increasing this value decreases the probability of message truncation when the queue stores more chunks.

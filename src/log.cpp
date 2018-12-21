@@ -113,7 +113,7 @@ void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept 
 }
 
 nowtech::TaskIdType nowtech::Log::getCurrentTaskId() const noexcept {
-  if(InterruptInformation::isInterrupt()) {
+  if(mOsInterface.isInterrupt()) {
     return Chunk::cIsrTaskId;
   }
   else {
@@ -245,7 +245,7 @@ nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType con
       append(appender, cSeparatorNormal);
     }
     else if(mConfig.taskRepresentation == LogConfig::TaskRepresentation::cName) {
-      if(InterruptInformation::isInterrupt()) {
+      if(mOsInterface.isInterrupt()) {
         append(appender, cIsrTaskName);
       }
       else {
@@ -285,7 +285,7 @@ nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType con
 }
     
 nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept {
-  if(!InterruptInformation::isInterrupt() || mConfig.logFromIsr) {
+  if(!mOsInterface.isInterrupt() || mConfig.logFromIsr) {
     TaskIdType taskId = aTaskId == Chunk::cInvalidTaskId ? getCurrentTaskId() : aTaskId;
     return nowtech::Chunk(&mOsInterface, aChunkBuffer, 1u, taskId, mConfig.blocks);
   }

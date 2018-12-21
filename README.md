@@ -279,5 +279,4 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     and functional versions.
   - Eliminate std::map.
   - Fix the lockup bug happening under extreme loads.
-  - Fix FreeRTOS isInterrupt.
-  - Move interrupt checking int OsInterface
+  - Fix FreeRTOS behaviour.

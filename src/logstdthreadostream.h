@@ -116,7 +116,7 @@ namespace nowtech {
         mConditionVariable.notify_one();
         mThread.join();
       }
-
+    
       void run() noexcept;
 
       void start() noexcept {

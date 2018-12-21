@@ -25,7 +25,6 @@
 #define NOWTECH_LOG_INCLUDED
 
 #include "BanCopyMove.h"
-#include "interrupt.h"
 #include <cstdint>
 #include <type_traits>
 #include <atomic>
@@ -227,6 +226,12 @@ namespace nowtech {
 
     /// Has default destructor to let the stub versions work.
     virtual ~LogOsInterface() = default;
+
+    /// Returns true if the implementation can examine whether we are in an ISR and we are in fact in an ISR.
+    /// By default it returns false.
+    static bool isInterrupt() noexcept {
+      return false;
+    }
 
     LogSizeType getChunkSize() const noexcept {
       return mChunkSize;

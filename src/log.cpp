@@ -147,7 +147,7 @@ void nowtech::Log::doRegisterCurrentTask() noexcept {
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
       mTaskIds[taskHandle] = mNextTaskId++;
-      doSend("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
+      send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
     }
     else { // nothing to do
     }
@@ -163,7 +163,7 @@ void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept 
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
       mTaskIds[taskHandle] = mNextTaskId++;
-      doSend("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
+      send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
     }
     else { // nothing to do
     }

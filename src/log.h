@@ -572,7 +572,13 @@ namespace nowtech {
     /// If aApp is registered, calls the normal send to process the arguments
     template<typename... Args>
     static void send(LogApp aApp, Args... args) noexcept {
-      sInstance->doSend(aApp, args...);
+      char chunk[sInstance->mChunkSize];
+      Chunk appender = sInstance->startSend(chunk, aApp);
+      if(appender.isValid()) {
+        sInstance->doSend(appender, args...);
+      }
+      else { // nothing to do
+      }
     }
 
     /// Sends any number of parameters which may be:
@@ -593,63 +599,43 @@ namespace nowtech {
     /// object for formatting.
     /// Other types are not sent, but signed by -=unknown=-
     /// Please avoid sending #, @ or newline characters. Sends newline
-    /// automatically in the end and unlocks the object.
+    /// automatically in the end.
     template<typename... Args>
     static void send(Args... args) noexcept {
-      sInstance->doSend(args...);
+      char chunk[sInstance->mChunkSize];
+      Chunk appender = sInstance->startSend(chunk);
+      if(appender.isValid()) {
+        sInstance->doSend(appender, args...);
+      }
+      else { // nothing to do
+      }
+    }
+
+    /// Similar to send but does not emit any preconfigured header.
+    template<typename... Args>
+    static void sendNoHeader(LogApp aApp, Args... args) noexcept {
+      char chunk[sInstance->mChunkSize];
+      Chunk appender = sInstance->startSendNoHeader(chunk, aApp);
+      if(appender.isValid()) {
+        sInstance->doSend(appender, args...);
+      }
+      else { // nothing to do
+      }
     }
 
     /// Similar to send but does not emit any preconfigured header.
     template<typename... Args>
     static void sendNoHeader(Args... args) noexcept {
-      sInstance->doSendNoHeader(args...);
+      char chunk[sInstance->mChunkSize];
+      Chunk appender = sInstance->startSendNoHeader(chunk);
+      if(appender.isValid()) {
+        sInstance->doSend(appender, args...);
+      }
+      else { // nothing to do
+      }
     }
 
 private:
-    template<typename... Args>
-    void doSend(LogApp aApp, Args... args) noexcept {
-      char chunk[mChunkSize];
-      Chunk appender = startSend(chunk, aApp);
-      if(appender.isValid()) {
-        doSend(appender, args...);
-      }
-      else { // nothing to do
-      }
-    }
-
-    template<typename... Args>
-    void doSend(Args... args) noexcept {
-      char chunk[mChunkSize];
-      Chunk appender = startSend(chunk);
-      if(appender.isValid()) {
-        doSend(appender, args...);
-      }
-      else { // nothing to do
-      }
-    }
-
-    template<typename... Args>
-    void doSendNoHeader(LogApp aApp, Args... args) noexcept {
-      char chunk[mChunkSize];
-      Chunk appender = startSendNoHeader(chunk, aApp);
-      if(appender.isValid()) {
-        doSend(appender, args...);
-      }
-      else { // nothing to do
-      }
-    }
-
-    template<typename... Args>
-    void doSendNoHeader(Args... args) noexcept {
-      char chunk[mChunkSize];
-      Chunk appender = startSendNoHeader(chunk);
-      if(appender.isValid()) {
-        doSend(appender, args...);
-      }
-      else { // nothing to do
-      }
-    }
-
     void doRegisterCurrentTask() noexcept;
     void doRegisterCurrentTask(char const * const) noexcept;
 

@@ -565,6 +565,7 @@ namespace nowtech {
     ~Log() noexcept {
       mKeepRunning.store(false);
       mOsInterface.joinTransmitterThread();
+      delete[] mShiftChainingCallBuffers;
     }
 
     /// Registers the current task if not already present. It can register

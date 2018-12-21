@@ -57,7 +57,9 @@ namespace nowtech {
     }
 
     /// Not intended to be destroyed
-    ~CircularBuffer() = default;
+    ~CircularBuffer() {
+      delete[] mBuffer;
+    }
 
     bool isEmpty() const noexcept {
       return mCount == 0;
@@ -137,6 +139,11 @@ namespace nowtech {
       mTransmitInProgress.store(false);
       mRefreshNeeded.store(false);
       mOsInterface.startRefreshTimer(&mRefreshNeeded);
+    }
+
+    ~TransmitBuffers() noexcept {
+      delete[] mBuffers[0];
+      delete[] mBuffers[1];
     }
 
     bool hasActiveTask() const noexcept {

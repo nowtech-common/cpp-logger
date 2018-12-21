@@ -27,7 +27,7 @@
 void nowtech::Chunk::push(char const mChar) noexcept {
   mChunk[mIndex++] = mChar;
   if(mIndex == mChunkSize) {
-    mOsInterface.push(mChunk, mBlocks);
+    mOsInterface->push(mChunk, mBlocks);
     mIndex = 1u;
   }
 }
@@ -133,11 +133,16 @@ nowtech::Log::Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexce
   , mChunkSize(aConfig.chunkSize) {
   sInstance = this;
   mOsInterface.createTransmitterThread(this, logTransmitterThreadFunction);
+  if(aConfig.allowShiftChainingCalls) {
+    mShiftChainingCallBuffers = new char[(std::numeric_limits<TaskIdType>::max() + static_cast<LogSizeType>(1u)) * mChunkSize];
+  }
+  else { // nothing to do
+  }
 }
 
 void nowtech::Log::doRegisterCurrentTask() noexcept {
   mOsInterface.lock();
-  if(mNextTaskId != cIsrTaskId) {
+  if(mNextTaskId != Chunk::cIsrTaskId) {
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
@@ -152,7 +157,7 @@ void nowtech::Log::doRegisterCurrentTask() noexcept {
 
 void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept {
   mOsInterface.lock();
-  if(mNextTaskId != cIsrTaskId) {
+  if(mNextTaskId != Chunk::cIsrTaskId) {
     mOsInterface.registerThreadName(aTaskName);
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
@@ -168,7 +173,7 @@ void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept 
 
 nowtech::TaskIdType nowtech::Log::getCurrentTaskId() const noexcept {
   if(InterruptInformation::isInterrupt()) {
-    return cIsrTaskId;
+    return Chunk::cIsrTaskId;
   }
   else {
     auto found = mTaskIds.find(mOsInterface.getCurrentThreadId());
@@ -176,49 +181,73 @@ nowtech::TaskIdType nowtech::Log::getCurrentTaskId() const noexcept {
   }
 }
 
-bool nowtech::Log::startSend(Chunk &aChunk) noexcept {
-  bool ret = startSendNoHeader();
-  if(ret) {
+nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer) noexcept {
+  nowtech::Chunk appender = startSendNoHeader(aChunkBuffer);
+  if(appender.isValid()) {
     if(mConfig.taskRepresentation == LogConfig::TaskRepresentation::cId) {
-      append(aChunk, *reinterpret_cast<uint8_t*>(aChunk.getData()), mConfig.taskIdFormat.mBase, mConfig.taskIdFormat.mFill);
-      append(aChunk, cSeparatorNormal);
+      append(appender, *reinterpret_cast<uint8_t*>(appender.getData()), mConfig.taskIdFormat.mBase, mConfig.taskIdFormat.mFill);
+      append(appender, cSeparatorNormal);
     }
     else if(mConfig.taskRepresentation == LogConfig::TaskRepresentation::cName) {
       if(InterruptInformation::isInterrupt()) {
-        append(aChunk, cIsrTaskName);
+        append(appender, cIsrTaskName);
       }
       else {
-        append(aChunk, mOsInterface.getCurrentThreadName());
+        append(appender, mOsInterface.getCurrentThreadName());
       }
-      append(aChunk, cSeparatorNormal);
+      append(appender, cSeparatorNormal);
     }
     else { // nothing to do
     }
     if(mConfig.tickFormat.mBase != 0) {
-      append(aChunk, mOsInterface.getLogTime(), static_cast<uint32_t>(mConfig.tickFormat.mBase), mConfig.tickFormat.mFill);
-      append(aChunk, cSeparatorNormal);
+      append(appender, mOsInterface.getLogTime(), static_cast<uint32_t>(mConfig.tickFormat.mBase), mConfig.tickFormat.mFill);
+      append(appender, cSeparatorNormal);
     }
     else { // nothing to do
     }
   }
   else { // nothing to do
   }
-  return ret;
+  return appender;
 }
 
-bool nowtech::Log::startSend(Chunk &aChunk, LogApp aApp) noexcept {
+nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, LogApp aApp) noexcept {
   auto found = mRegisteredApps.find(aApp);
-  if(found != mRegisteredApps.end() && startSend(aChunk)) {
-    append(aChunk, found->second);
-    append(aChunk, cSeparatorNormal);
-    return true;
+  if(found != mRegisteredApps.end()) {
+    nowtech::Chunk appender = startSend(aChunkBuffer);
+    if(appender.isValid()) {
+      append(appender, found->second);
+      append(appender, cSeparatorNormal);
+    }
+    else { // nothing to do
+    }
+    return appender;
   }
   else { // nothing to do
+    return nowtech::Chunk();
   }
-  return false;
+}
+    
+nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer) noexcept {
+  if(!InterruptInformation::isInterrupt() || mConfig.logFromIsr) {
+    TaskIdType taskId = getCurrentTaskId();
+    return nowtech::Chunk(&mOsInterface, aChunkBuffer, 1u, taskId, mConfig.blocks);
+  }
+  else {
+    return nowtech::Chunk();
+  }
 }
 
-void nowtech::Log::append(Chunk &aChunk, double const aValue, uint8_t const aDigitsNeeded) noexcept {
+nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, LogApp aApp) noexcept {
+  if(mRegisteredApps.find(aApp) != mRegisteredApps.end()) {
+    return startSendNoHeader(aChunkBuffer);
+  }
+  else {
+    return nowtech::Chunk();
+  }
+}
+
+void nowtech::Log::append(nowtech::Chunk &aChunk, double const aValue, uint8_t const aDigitsNeeded) noexcept {
   if(std::isnan(aValue)) {
     append(aChunk, "nan");
     return;

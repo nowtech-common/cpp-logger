@@ -33,6 +33,8 @@
 #include <cmath>
 #include <map>
 
+#include <iostream>
+
 namespace nowtech {
 
   /// Type for all logging-related sizes
@@ -102,6 +104,12 @@ namespace nowtech {
     static constexpr LogFormat cX4 = LogFormat(16, 4);
     static constexpr LogFormat cX6 = LogFormat(16, 6);
     static constexpr LogFormat cX8 = LogFormat(16, 8);
+
+    /// If true, use of Log << something << to << log << Log::end; calls will
+    /// be allowed from registered threads (but NOT from ISR).
+    /// This requires pre-allocating 256 * chunkSize bytes of memory, but lets
+    /// reduce the stack sizes dramatically.
+    bool allowShiftChainingCalls = true;
 
     /// If true, logging will work from ISR.
     bool logFromIsr = false;
@@ -280,10 +288,13 @@ namespace nowtech {
   /// Auxiliary class, not part of the Log API.
   class Chunk final {
   public:
-    static constexpr TaskIdType cInvalidTaskId = 0;
+    static constexpr TaskIdType cInvalidTaskId = 0u;
+    /// Artificial task ID for interrupts.
+    static constexpr TaskIdType cIsrTaskId = std::numeric_limits<TaskIdType>::max();
+
 
   private:
-    LogOsInterface &mOsInterface;
+    LogOsInterface *mOsInterface;
     char * const mOrigin;
     char * mChunk;
     LogSizeType const mChunkSize;
@@ -292,29 +303,38 @@ namespace nowtech {
     bool const mBlocks;
 
   public:
-    Chunk(LogOsInterface &aOsInterface, char * const aChunk, LogSizeType const aBufferLength) noexcept
+    Chunk() noexcept
+      : mOsInterface(nullptr)
+      , mOrigin(nullptr)
+      , mChunk(nullptr)
+      , mChunkSize(0u)
+      , mBufferBytes(0u)
+      , mBlocks(true) {
+    }
+
+    Chunk(LogOsInterface *aOsInterface, char * const aChunk, LogSizeType const aBufferLength) noexcept
       : mOsInterface(aOsInterface)
       , mOrigin(aChunk)
       , mChunk(aChunk)
-      , mChunkSize(aOsInterface.getChunkSize())
+      , mChunkSize(aOsInterface->getChunkSize())
       , mBufferBytes(aBufferLength * mChunkSize)
       , mBlocks(true) {
     }
 
-    Chunk(LogOsInterface &aOsInterface
+    Chunk(LogOsInterface *aOsInterface
       , char * const aChunk
       , LogSizeType const aBufferLength
       , TaskIdType const aTaskId) noexcept
       : mOsInterface(aOsInterface)
       , mOrigin(aChunk)
       , mChunk(aChunk)
-      , mChunkSize(aOsInterface.getChunkSize())
+      , mChunkSize(aOsInterface->getChunkSize())
       , mBufferBytes(aBufferLength * mChunkSize)
       , mBlocks(true) {
       mChunk[0] = *reinterpret_cast<char const *>(&aTaskId);
     }
 
-    Chunk(LogOsInterface &aOsInterface
+    Chunk(LogOsInterface *aOsInterface
       , char * const aChunk
       , LogSizeType const aBufferLength
       , TaskIdType const aTaskId
@@ -322,15 +342,11 @@ namespace nowtech {
       : mOsInterface(aOsInterface)
       , mOrigin(aChunk)
       , mChunk(aChunk)
-      , mChunkSize(aOsInterface.getChunkSize())
+      , mChunkSize(aOsInterface->getChunkSize())
       , mBufferBytes(aBufferLength * mChunkSize)
       , mBlocks(aBlocks) {
       mChunk[0] = *reinterpret_cast<char const*>(&aTaskId);
     }
-
-    Chunk(Chunk const &) = delete;
-    Chunk(Chunk &&) = delete;
-    Chunk& operator=(Chunk &&) = delete;
 
     char * getData() const noexcept {
       return mChunk;
@@ -338,6 +354,10 @@ namespace nowtech {
 
     TaskIdType getTaskId() const noexcept {
       return *reinterpret_cast<TaskIdType*>(mChunk);
+    }
+
+    bool isValid() const noexcept {
+      return mOsInterface != nullptr;
     }
 
     char * const operator++() noexcept {
@@ -375,18 +395,26 @@ namespace nowtech {
 
     void flush() noexcept {
       mChunk[mIndex++] = '\n';
-      mOsInterface.push(mChunk, mBlocks);
+      mOsInterface->push(mChunk, mBlocks);
       mIndex = 1;
     }
 
     void pop() noexcept {
       mIndex = 1;
-      if(!mOsInterface.pop(mChunk)) {
+      if(!mOsInterface->pop(mChunk)) {
         mChunk[0] = cInvalidTaskId;
       }
       else { // nothing to do
       }
     }
+  };
+
+  /// Dummy type to use in << chain as end marker.
+  enum class LogShiftChainMarker : uint8_t {
+    cEnd = 0u
+  };
+
+  class LogShiftChainHelper final : public BanCopyMove {
   };
 
   /// High-level template based logging class for logging characters, C-style
@@ -419,6 +447,9 @@ namespace nowtech {
   /// number of parameters.
   class Log final : public BanCopyMove {
   public:
+    /// Will be used as Log << something << to << log << Log::end;
+    static constexpr LogShiftChainMarker end = LogShiftChainMarker::cEnd;
+
     /// Output for unknown LogApp parameter
     static constexpr char cUnknownApplicationName[8] = "UNKNOWN";
 
@@ -446,9 +477,6 @@ namespace nowtech {
       '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
     };
 
-    /// Artificial task ID for interrupts.
-    static constexpr TaskIdType cIsrTaskId = std::numeric_limits<TaskIdType>::max();
-
     /// Instance for static access.
     static Log *sInstance;
 
@@ -475,6 +503,9 @@ namespace nowtech {
 
     /// Registry to check calls like Log::send(nowtech::LogApp::cSystem, "stuff to log")
     std::map<LogApp, char const *> mRegisteredApps;
+
+    /// Used for Chunk buffers during shift chain-type calls.
+    char * mShiftChainingCallBuffers = nullptr;
 
   public:
     /// Defined in .cpp to allow stub.
@@ -520,6 +551,24 @@ namespace nowtech {
     /// Transmitter thread implementation.
     void transmitterThreadFunction() noexcept;
 
+/*    template<typename ArgumentType>
+    static LogShiftChainHelper operator<<(OutputType const aValue) noexcept {
+      TaskIdType taskId = getCurrentTaskId();
+      if(taskId != Chain::cInvalidTaskId && taskId != Chain::cIsrTaskId) {
+        return LogShiftChainHelper();
+      }
+      else {
+        Chunk appender(mOsInterface, mShiftChainingCallBuffers + taskId * mChunkSize, 1u, taskId, mConfig.blocks);
+        if(startSend(appender)) {
+          append(aChunk, aValue);
+          return LogShiftChainHelper(sInstance, appender);
+        }
+        else {
+          return LogShiftChainHelper();
+        }
+      }
+    }
+*/
     /// If aApp is registered, calls the normal send to process the arguments
     template<typename... Args>
     static void send(LogApp aApp, Args... args) noexcept {
@@ -559,10 +608,9 @@ namespace nowtech {
 private:
     template<typename... Args>
     void doSend(LogApp aApp, Args... args) noexcept {
-      TaskIdType taskId = getCurrentTaskId();
       char chunk[mChunkSize];
-      Chunk appender(mOsInterface, chunk, 1, taskId, mConfig.blocks);
-      if(startSend(appender, aApp)) {
+      Chunk appender = startSend(chunk, aApp);
+      if(appender.isValid()) {
         doSend(appender, args...);
       }
       else { // nothing to do
@@ -571,10 +619,9 @@ private:
 
     template<typename... Args>
     void doSend(Args... args) noexcept {
-      TaskIdType taskId = getCurrentTaskId();
       char chunk[mChunkSize];
-      Chunk appender(mOsInterface, chunk, 1, taskId, mConfig.blocks);
-      if(startSend(appender)) {
+      Chunk appender = startSend(chunk);
+      if(appender.isValid()) {
         doSend(appender, args...);
       }
       else { // nothing to do
@@ -583,10 +630,9 @@ private:
 
     template<typename... Args>
     void doSendNoHeader(LogApp aApp, Args... args) noexcept {
-      if(startSendNoHeader(aApp)) {
-        TaskIdType taskId = getCurrentTaskId();
-        char chunk[mChunkSize];
-        Chunk appender(mOsInterface, chunk, 1, taskId, mConfig.blocks);
+      char chunk[mChunkSize];
+      Chunk appender = startSendNoHeader(chunk, aApp);
+      if(appender.isValid()) {
         doSend(appender, args...);
       }
       else { // nothing to do
@@ -595,10 +641,9 @@ private:
 
     template<typename... Args>
     void doSendNoHeader(Args... args) noexcept {
-      if(startSendNoHeader()) {
-        TaskIdType taskId = getCurrentTaskId();
-        char chunk[mChunkSize];
-        Chunk appender(mOsInterface, chunk, 1, taskId, mConfig.blocks);
+      char chunk[mChunkSize];
+      Chunk appender = startSendNoHeader(chunk);
+      if(appender.isValid()) {
         doSend(appender, args...);
       }
       else { // nothing to do
@@ -639,25 +684,15 @@ private:
       doSend(aChunk, aArgs...);
     }
 
-    /// Constructs the message header, returns true if the logging should happen.
-    bool startSend(Chunk &aChunk) noexcept;
+    /// Constructs the message header, returns appender to use.
+    Chunk startSend(char * const aChunkBuffer) noexcept;
 
-    /// Constructs the message header, returns true if the logging should happen.
-    bool startSend(Chunk &aChunk, LogApp aApp) noexcept;
+    /// Constructs the message header, returns appender to use.
+    Chunk startSend(char * const aChunkBuffer, LogApp aApp) noexcept;
 
-    bool startSendNoHeader() noexcept {
-      if(!mConfig.logFromIsr && InterruptInformation::isInterrupt()) {
-        return false;
-      }
-      else {
-        return true;
-      }
-    }
+    Chunk startSendNoHeader(char * const aChunkBuffer) noexcept;
 
-    bool startSendNoHeader(LogApp aApp) noexcept {
-      auto found = mRegisteredApps.find(aApp);
-      return found != mRegisteredApps.end() && startSendNoHeader();
-    }
+    Chunk startSendNoHeader(char * const aChunkBuffer, LogApp aApp) noexcept;
 
     /// Sends the trailing newline character.
     void finishSend(Chunk &aChunk) noexcept {

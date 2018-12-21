@@ -51,9 +51,9 @@ namespace nowtech {
       , mBufferLength(aBufferLength)
       , mChunkSize(aChunkSize)
       , mBuffer(new char[aBufferLength * aChunkSize])
-      , mStuffStart(aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId)
-      , mStuffEnd(aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId)
-      , mFound(aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId) {
+      , mStuffStart(&aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId)
+      , mStuffEnd(&aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId)
+      , mFound(&aOsInterface, mBuffer, aBufferLength, Chunk::cInvalidTaskId) {
     }
 
     /// Not intended to be destroyed

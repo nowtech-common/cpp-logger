@@ -29,8 +29,8 @@ nowtech::Chunk const &nowtech::CircularBuffer::inspect(TaskIdType const aTaskId)
     ++mFound;
   }
   if(mInspectedCount == mCount) {
-    nowtech::Chunk source(mOsInterface, mBuffer, mBufferLength);
-    nowtech::Chunk destination(mOsInterface, mBuffer, mBufferLength);
+    nowtech::Chunk source(&mOsInterface, mBuffer, mBufferLength);
+    nowtech::Chunk destination(&mOsInterface, mBuffer, mBufferLength);
     source = mStuffStart.getData();
     destination = mStuffStart.getData();
     while(source.getData() != mStuffEnd.getData()) {

@@ -67,6 +67,9 @@ int main() {
 
   Log::registerCurrentTask("main");
   Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+  Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+  Log::send("uint64: ", uint64, " int64: ", int64);
+  Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
 
   for(int32_t i = 0; i < threadCount; ++i) {
     threads[i] = std::thread(delayedLog, i);

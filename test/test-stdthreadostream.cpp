@@ -58,6 +58,7 @@ int main() {
   nowtech::LogConfig logConfig;
   logConfig.taskRepresentation = nowtech::LogConfig::TaskRepresentation::cName;
   logConfig.refreshPeriod      = 200u;
+ // logConfig.allowShiftChainingCalls = false;
   nowtech::LogStdThreadOstream osInterface(std::cout, logConfig);
   nowtech::Log log(osInterface, logConfig);
   Log::registerApp(nowtech::LogApp::cSystem, "system");
@@ -70,6 +71,16 @@ int main() {
   Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
   Log::send("uint64: ", uint64, " int64: ", int64);
   Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
+
+  uint8_t const uint8 = 42;
+  int8_t const int8 = -42;
+
+  Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
+  Log::i() << nowtech::LogApp::cSystem << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
+  Log::i() << uint8 << ' ' << int8 << Log::end;
+  Log::i() << LC::cX2 << uint8 << int8 << Log::end;
+  Log::i() << int8 << Log::end;
+  Log::i() << Log::end;
 
   for(int32_t i = 0; i < threadCount; ++i) {
     threads[i] = std::thread(delayedLog, i);

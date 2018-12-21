@@ -46,20 +46,31 @@ namespace nowtech {
   /// Struct holding numeric system and zero fill information.
   struct LogFormat {
     /// Base of the numeric system. Can be 2, 10, 16.
-    uint8_t mBase;
+    uint8_t base;
 
     /// Number of digits to emit with zero fill, or 0 if no fill.
-    uint8_t mFill;
+    uint8_t fill;
 
     /// Constructor.
-    constexpr LogFormat(uint8_t const aBase, uint8_t const aFill)
-      : mBase(aBase)
-      , mFill(aFill) {
+    constexpr LogFormat()
+    : base(0u)
+    , fill(0u) {
     }
+    
+    /// Constructor.
+    constexpr LogFormat(uint8_t const aBase, uint8_t const aFill)
+    : base(aBase)
+    , fill(aFill) {
+    }
+
     LogFormat(LogFormat const &) = default;
     LogFormat(LogFormat &&) = default;
     LogFormat& operator=(LogFormat const &) = default;
     LogFormat& operator=(LogFormat &&) = default;
+
+    bool isValid() const noexcept {
+      return base == 2u || base == 10u || base == 16u;
+    }
   };
 
   /// Type of application subsystem to log. These needs to be registered
@@ -347,6 +358,11 @@ namespace nowtech {
       , mBlocks(aBlocks) {
       mChunk[0] = *reinterpret_cast<char const*>(&aTaskId);
     }
+    
+/*Chunk(Chunk const &) = default;
+    Chunk(Chunk &&) = default;
+    Chunk& operator=(Chunk const &) = default;
+    Chunk& operator=(Chunk &&) = default;*/
 
     char * getData() const noexcept {
       return mChunk;
@@ -414,7 +430,35 @@ namespace nowtech {
     cEnd = 0u
   };
 
-  class LogShiftChainHelper final : public BanCopyMove {
+  class LogShiftChainHelper final {
+    Log      *mLog;
+    Chunk     mAppender;
+    LogFormat mNextFormat;
+
+  public:
+    LogShiftChainHelper() : mLog(nullptr) {
+    }
+
+    LogShiftChainHelper(Log *aLog, Chunk aAppender)
+    : mLog(aLog)
+    , mAppender(aAppender) {
+    }
+
+    LogShiftChainHelper(Log *aLog, Chunk const aAppender, LogFormat const aFormat)
+    : mLog(aLog)
+    , mAppender(aAppender)
+    , mNextFormat(aFormat) {
+    }
+
+    template<typename ArgumentType>
+    LogShiftChainHelper& operator<<(ArgumentType const aValue) noexcept;
+
+    LogShiftChainHelper& operator<<(LogFormat const &aFormat) noexcept {
+      mNextFormat = aFormat;
+      return *this;
+    }
+
+    LogShiftChainHelper& operator<<(LogShiftChainMarker const) noexcept;
   };
 
   /// High-level template based logging class for logging characters, C-style
@@ -446,6 +490,7 @@ namespace nowtech {
   /// a limited number parameter type combinations, and possibly only a small
   /// number of parameters.
   class Log final : public BanCopyMove {
+    friend class LogShiftChainHelper;
   public:
     /// Will be used as Log << something << to << log << Log::end;
     static constexpr LogShiftChainMarker end = LogShiftChainMarker::cEnd;
@@ -477,9 +522,6 @@ namespace nowtech {
       '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
     };
 
-    /// Instance for static access.
-    static Log *sInstance;
-
     /// The subclass object used as interface to the OS, which also handles
     /// locking, time and thread management.
     LogOsInterface &mOsInterface;
@@ -505,7 +547,10 @@ namespace nowtech {
     std::map<LogApp, char const *> mRegisteredApps;
 
     /// Used for Chunk buffers during shift chain-type calls.
-    char * mShiftChainingCallBuffers = nullptr;
+    char *mShiftChainingCallBuffers = nullptr;
+
+    /// Instance for static access.
+    static Log *sInstance;
 
   public:
     /// Defined in .cpp to allow stub.
@@ -548,32 +593,46 @@ namespace nowtech {
       return sInstance->mRegisteredApps.find(aApp) != sInstance->mRegisteredApps.end();
     }
 
+    static Log& i() noexcept {
+      return *sInstance;
+    }
+
     /// Transmitter thread implementation.
     void transmitterThreadFunction() noexcept;
 
-/*    template<typename ArgumentType>
-    static LogShiftChainHelper operator<<(OutputType const aValue) noexcept {
-      TaskIdType taskId = getCurrentTaskId();
-      if(taskId != Chain::cInvalidTaskId && taskId != Chain::cIsrTaskId) {
-        return LogShiftChainHelper();
-      }
-      else {
-        Chunk appender(mOsInterface, mShiftChainingCallBuffers + taskId * mChunkSize, 1u, taskId, mConfig.blocks);
-        if(startSend(appender)) {
-          append(aChunk, aValue);
-          return LogShiftChainHelper(sInstance, appender);
+    /// Starts a << operator chain with the specified argument
+    template<typename ArgumentType>
+    LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept {
+      if(mShiftChainingCallBuffers) {
+        TaskIdType taskId = getCurrentTaskId();
+        Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId);
+        if(appender.isValid()) {
+          append(appender, aValue);
+          return LogShiftChainHelper(this, appender);
         }
         else {
           return LogShiftChainHelper();
         }
       }
+      else {
+        return LogShiftChainHelper();
+      }
     }
-*/
+
+    /// Starts a << operator chain with the specified LogApp
+    LogShiftChainHelper operator<<(LogApp const aApp) noexcept;
+
+    /// Starts a << operator chain with the specified format to be used by the next argument
+    LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;
+
+    /// Finishes the << operator chain just started
+    LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;
+
     /// If aApp is registered, calls the normal send to process the arguments
     template<typename... Args>
     static void send(LogApp aApp, Args... args) noexcept {
       char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSend(chunk, aApp);
+      Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId, aApp);
       if(appender.isValid()) {
         sInstance->doSend(appender, args...);
       }
@@ -603,7 +662,7 @@ namespace nowtech {
     template<typename... Args>
     static void send(Args... args) noexcept {
       char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSend(chunk);
+      Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId);
       if(appender.isValid()) {
         sInstance->doSend(appender, args...);
       }
@@ -615,7 +674,7 @@ namespace nowtech {
     template<typename... Args>
     static void sendNoHeader(LogApp aApp, Args... args) noexcept {
       char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSendNoHeader(chunk, aApp);
+      Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId, aApp);
       if(appender.isValid()) {
         sInstance->doSend(appender, args...);
       }
@@ -627,12 +686,17 @@ namespace nowtech {
     template<typename... Args>
     static void sendNoHeader(Args... args) noexcept {
       char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSendNoHeader(chunk);
+      Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId);
       if(appender.isValid()) {
         sInstance->doSend(appender, args...);
       }
       else { // nothing to do
       }
+    }
+
+    /// Sends the trailing newline character.
+    void finishSend(Chunk &aChunk) noexcept {
+      aChunk.flush();
     }
 
 private:
@@ -670,38 +734,28 @@ private:
       doSend(aChunk, aArgs...);
     }
 
-    /// Constructs the message header, returns appender to use.
-    Chunk startSend(char * const aChunkBuffer) noexcept;
-
-    /// Constructs the message header, returns appender to use.
-    Chunk startSend(char * const aChunkBuffer, LogApp aApp) noexcept;
-
-    Chunk startSendNoHeader(char * const aChunkBuffer) noexcept;
-
-    Chunk startSendNoHeader(char * const aChunkBuffer, LogApp aApp) noexcept;
-
-    /// Sends the trailing newline character.
-    void finishSend(Chunk &aChunk) noexcept {
-      aChunk.flush();
-    }
+    Chunk startSend(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
+    Chunk startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
+    Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
+    Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
 
     template<typename T>
     void append(Chunk &aChunk, LogFormat& aFormat, T const aValue) noexcept {
       /// avoid too many template instantiations
       if(std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value || std::is_same<T, int32_t>::value) {
-        append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.mBase), aFormat.mFill);
+        append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
       }
       else if(std::is_same<T, uint8_t>::value || std::is_same<T, uint16_t>::value || std::is_same<T, uint32_t>::value) {
-        append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.mBase), aFormat.mFill);
+        append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
       }
       else if(std::is_same<T, int64_t>::value) {
-        append(aChunk, static_cast<int64_t>(aValue), static_cast<int64_t>(aFormat.mBase), aFormat.mFill);
+        append(aChunk, static_cast<int64_t>(aValue), static_cast<int64_t>(aFormat.base), aFormat.fill);
       }
       else if(std::is_same<T, uint64_t>::value) {
-        append(aChunk, static_cast<uint64_t>(aValue), static_cast<uint64_t>(aFormat.mBase), aFormat.mFill);
+        append(aChunk, static_cast<uint64_t>(aValue), static_cast<uint64_t>(aFormat.base), aFormat.fill);
       }
       else if(std::is_same<T, float>::value || std::is_same<T, double>::value) {
-        append(aChunk, static_cast<double>(aValue), aFormat.mFill);
+        append(aChunk, static_cast<double>(aValue), aFormat.fill);
       }
       else {
         append(aChunk, "-=unknown=-");
@@ -743,21 +797,21 @@ private:
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint8_t const aValue) noexcept {
-      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint8Format.mBase), mConfig.uint8Format.mFill);
+      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint8Format.base), mConfig.uint8Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint16Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint16_t const aValue) noexcept {
-      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint16Format.mBase), mConfig.uint16Format.mFill);
+      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(mConfig.uint16Format.base), mConfig.uint16Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint32Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint32_t const aValue) noexcept {
-      append(aChunk, aValue, static_cast<uint32_t>(mConfig.uint32Format.mBase), mConfig.uint32Format.mFill);
+      append(aChunk, aValue, static_cast<uint32_t>(mConfig.uint32Format.base), mConfig.uint32Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.uint64Format
@@ -765,28 +819,28 @@ private:
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, uint64_t const aValue) noexcept {
-      append(aChunk, aValue, static_cast<uint64_t>(mConfig.uint32Format.mBase), mConfig.uint32Format.mFill);
+      append(aChunk, aValue, static_cast<uint64_t>(mConfig.uint32Format.base), mConfig.uint32Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int8Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int8_t const aValue) noexcept {
-      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int8Format.mBase), mConfig.int8Format.mFill);
+      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int8Format.base), mConfig.int8Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int16Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int16_t const aValue) noexcept {
-      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int16Format.mBase), mConfig.int16Format.mFill);
+      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(mConfig.int16Format.base), mConfig.int16Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int32Format
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int32_t const aValue) noexcept {
-      append(aChunk, aValue, static_cast<int32_t>(mConfig.int32Format.mBase), mConfig.int32Format.mFill);
+      append(aChunk, aValue, static_cast<int32_t>(mConfig.int32Format.base), mConfig.int32Format.fill);
     }
 
     /// Uses append(T const value, T const base, uint8_t const fill) with mConfig.int64Format
@@ -794,15 +848,15 @@ private:
     /// @param value number to convert and send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, int64_t const aValue) noexcept {
-      append(aChunk, aValue, static_cast<int64_t>(mConfig.int64Format.mBase), mConfig.int64Format.mFill);
+      append(aChunk, aValue, static_cast<int64_t>(mConfig.int64Format.base), mConfig.int64Format.fill);
     }
 
     void append(Chunk &aChunk, float const aValue) noexcept {
-      append(aChunk, static_cast<double>(aValue), mConfig.floatFormat.mFill);
+      append(aChunk, static_cast<double>(aValue), mConfig.floatFormat.fill);
     }
 
     void append(Chunk &aChunk, double const aValue) noexcept {
-      append(aChunk, aValue, mConfig.doubleFormat.mFill);
+      append(aChunk, aValue, mConfig.doubleFormat.fill);
     }
 
     /// Converts the number to string in a stack buffer and uses append(char
@@ -881,6 +935,22 @@ private:
 
     void append(Chunk &aChunk, double const aValue, uint8_t const aDigitsNeeded) noexcept;
   };// class Log
+
+  template<typename ArgumentType>
+  LogShiftChainHelper& LogShiftChainHelper::operator<<(ArgumentType const aValue) noexcept {
+    if(mLog != nullptr) {
+      if(mNextFormat.isValid()) {
+        mLog->append(mAppender, mNextFormat, aValue);
+        mNextFormat.base = 0u;
+      }
+      else {
+        mLog->append(mAppender, aValue);
+      }
+    }
+    else { // nothing to do
+    }
+    return *this;
+  }
 
 } // namespace nowtech
 

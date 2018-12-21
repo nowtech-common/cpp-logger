@@ -3,11 +3,11 @@
 Originally, this library was designed to use in an embedded environment as a debugging log library.
 It was designed to be lean and versatile
 with different options for tailoring the logger behavior for smaller
-or larger MCUs. However, because of extensive use of variadic
-templates, stack usage may be in the order of kilobytes for many passed
-parameters. **This holds for all the tasks using the log system.** For
-low stack usage, avoid many parameters. For small compiled size, avoid
-many parameter footprints (i.e. avoid many template instantiations).
+or larger MCUs. 
+
+There are two log call flavours:
+  - The all-purpose function call-like solution, but it heavily relies on variadic templates, stack usage may be in the order of kilobytes for many passed parameters. **This holds for all the tasks using the log system.** For low stack usage, avoid many parameters. For small compiled size, avoid many parameter footprints (i.e. avoid many template instantiations).
+  - The `std::ostream`-like solution, which uses minimal stack. It has only one limitation: it is unable to surpress the header like the other one's sendNoHeader call.
 
 The library reserves some buffers and a queue during construction, and makes
 small heap allocations during thread / log app registrations. After it, no heap
@@ -138,8 +138,10 @@ cX*n* |constant         |LogFormat(16, *n*)|Used for n-digit hexadecimal output,
 
 ### Invocation
 
+#### All-purpose solution
+
 The API has for static method templates, which lets the log system be
-ca= lled from any place in the application:
+called from any place in the application:
 
   - `static void send(LogApp aApp, Args... args) noexcept;`
   - `static void send(Args... args) noexcept;`
@@ -153,6 +155,31 @@ preceded by the string used to register the given `LogApp = ;`parameter
 if it was actually registered. If not, the whole message is discarded.
 The ones without the `LogApp` parameter will emit the message
 unconditionally.
+
+Examples:
+```cpp
+Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+Log::send("uint64: ", uint64, " int64: ", int64);
+Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
+```
+
+#### std::ostream-like solution
+
+The following entry points are available:
+  - `LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept;`
+  - `LogShiftChainHelper operator<<(LogApp const aApp) noexcept;`
+  - `LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;`
+  - `LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;`
+
+Due to operator overloading, static access is not available, so the Log instance has to be required:
+
+```cpp
+Log::i() << uint8 << ' ' << int8 << Log::end;
+Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
+Log::i() << LC::cX2 << uint8 << int8 << Log::end;
+Log::i() << Log::end;
+```
 
 Available parameter types to print:
 
@@ -250,6 +277,5 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     and functional versions.
   - Eliminate std::map.
   - Fix the lockup bug happening under extreme loads.
-  - Examine the possibility of introducing << operators.
   - Fix FreeRTOS isInterrupt.
   - Move interrupt checking int OsInterface

@@ -75,12 +75,17 @@ int main() {
   uint8_t const uint8 = 42;
   int8_t const int8 = -42;
 
-  Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
-  Log::i() << nowtech::LogApp::cSystem << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
-  Log::i() << uint8 << ' ' << int8 << Log::end;
-  Log::i() << LC::cX2 << uint8 << int8 << Log::end;
-  Log::i() << int8 << Log::end;
-  Log::i() << Log::end;
+  try {
+    Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
+    Log::i() << nowtech::LogApp::cSystem << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
+    Log::i() << uint8 << ' ' << int8 << Log::end;
+    Log::i() << LC::cX2 << uint8 << int8 << Log::end;
+    Log::i() << "C-string " << int8 << Log::end;
+    Log::i() << Log::end;
+  }
+  catch(std::exception &e) {
+    Log::i() << "Exception: " << e.what() << Log::end;
+  }
 
   for(int32_t i = 0; i < threadCount; ++i) {
     threads[i] = std::thread(delayedLog, i);

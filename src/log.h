@@ -768,6 +768,11 @@ private:
       }
     }
 
+    template<>
+    void append(Chunk &aChunk, LogFormat& aFormat, char const * const aValue) noexcept {
+      append(aChunk, aValue);
+    }
+
     void append(Chunk &aChunk, bool const aBool) noexcept {
       if(aBool) {
         append(aChunk, "true");

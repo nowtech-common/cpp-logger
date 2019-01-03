@@ -87,8 +87,13 @@ void nowtech::Log::doRegisterCurrentTask() noexcept {
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
-      mTaskIds[taskHandle] = mNextTaskId++;
-      send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
+      mTaskIds[taskHandle] = mNextTaskId;
+      if(mConfig.allowRegistrationLog) {
+        send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " (", mNextTaskId, ") -=-");
+      }
+      else { // nothing to do
+      }
+      ++mNextTaskId;
     }
     else { // nothing to do
     }
@@ -103,8 +108,13 @@ void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept 
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
-      mTaskIds[taskHandle] = mNextTaskId++;
-      send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " -=-");
+      mTaskIds[taskHandle] = mNextTaskId;
+      if(mConfig.allowRegistrationLog) {
+        send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " (", mNextTaskId, ") -=-");
+      }
+      else { // nothing to do
+      }
+      ++mNextTaskId;
     }
     else { // nothing to do
     }

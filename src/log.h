@@ -55,7 +55,7 @@ namespace nowtech {
     : base(0u)
     , fill(0u) {
     }
-    
+
     /// Constructor.
     constexpr LogFormat(uint8_t const aBase, uint8_t const aFill)
     : base(aBase)
@@ -114,6 +114,10 @@ namespace nowtech {
     static constexpr LogFormat cX4 = LogFormat(16, 4);
     static constexpr LogFormat cX6 = LogFormat(16, 6);
     static constexpr LogFormat cX8 = LogFormat(16, 8);
+
+    /// If true, task registration will be sent to the output in the form
+    /// in the form -=- Registered task: taskname (1) -=-
+    bool allowRegistrationLog = true;
 
     /// If true, use of Log << something << to << log << Log::end; calls will
     /// be allowed from registered threads (but NOT from ISR).
@@ -236,7 +240,7 @@ namespace nowtech {
     LogSizeType getChunkSize() const noexcept {
       return mChunkSize;
     }
-   
+
     /// Only needed in implementations without an OS-supported task name and task ID exceeding uint32_t.
     /// This function does nothing.
     /// Registers the given name and an artificial ID in a local map.
@@ -267,7 +271,7 @@ namespace nowtech {
     /// @param log the Log instance to be passed as parameter to the function in the other parameter
     /// @param threadFunc the function to serve as the body of the new thread.
     virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept = 0;
-      
+
     /// Joins the thread, if applicable to the OsInterface subclass. This des nothing.
     virtual void joinTransmitterThread() noexcept {
     };
@@ -363,7 +367,7 @@ namespace nowtech {
       , mBlocks(aBlocks) {
       mChunk[0] = *reinterpret_cast<char const*>(&aTaskId);
     }
-    
+
 /*Chunk(Chunk const &) = default;
     Chunk(Chunk &&) = default;
     Chunk& operator=(Chunk const &) = default;

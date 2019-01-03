@@ -48,7 +48,7 @@ void delayedLog(int32_t n) {
   Log::send(nowtech::LogApp::cSystem, n, ": ", 0);
   for(int64_t i = 1; i < 13; ++i) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1 << i));
-    Log::send(nowtech::LogApp::cSystem, n, ": ", LC::cX1, i);
+    Log::send(nowtech::LogApp::cSystem, n, ". thread delay logarithm: ", LC::cX1, i);
   }
 }
  

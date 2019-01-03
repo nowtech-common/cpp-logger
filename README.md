@@ -111,7 +111,7 @@ Field | Possible values | Default value | Effect
 `cBn` |constant         |LogFormat(2, *n*)|Used for n-bit binary output, where *n* can be 8, 16, 24 or 32.
 cD*n* |constant         |LogFormat(10, *n*)|Used for n-digit decimal output, where n can be 2-8.
 cX*n* |constant         |LogFormat(16, *n*)|Used for n-digit hexadecimal output, where *n* can be 2, 4, 6 or 8.
-allowRegistrationLog|bool|true          |If true, task registration will be sent to the output in the form -=- Registered task: taskname (1) -=-
+allowRegistrationLog|bool|true          |If true, task registration will be sent to the output in the form -=- Registered task: taskname (1) -=- **Note**, systems with limited stack space and using std::ostream-like calls need to disable this, because the output is created using the stack-hungry variadic template call.
 allowShiftChainingCalls|bool|true       |True means reserving a buffer of 256 * chunkSize characters to let the `std::ostream`-like calls work. Setting it false will let such calls compile, but they won't do anything.
 `logFromIsr`|bool       |false          |If false, log calls from ISR are discarded. If true, logging from ISR works. However, in this mode the message may be truncated if the actual free space in the queue is too small.
 `chunkSize`|uint32_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\n' signs the end of a message.

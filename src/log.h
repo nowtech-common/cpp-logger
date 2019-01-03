@@ -32,8 +32,6 @@
 #include <cmath>
 #include <map>
 
-#include <iostream>
-
 namespace nowtech {
 
   /// Type for all logging-related sizes

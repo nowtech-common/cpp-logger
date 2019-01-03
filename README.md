@@ -183,7 +183,7 @@ Log::i() << LC::cX2 << uint8 << int8 << Log::end;
 Log::i() << Log::end;
 ```
 
-Of course, if the once created instance is available at the call location, it can be used instead of the static call returning the same singleton.
+**Important**: omitting Log::end from the end of the clause makes the logged content mix with contents from subsequent calls. Of course, if the once created instance is available at the call location, it can be used instead of the static call returning the same singleton.
 Available parameter types to print:
 
 Type        |Printed value          |If it can be preceded by a LogFormat parameter to change the style

@@ -259,7 +259,7 @@ One of these headers, and if present the related .cpp is also needed:
   - logstdthreadostream.h
   - logstdthreadostream.cpp
 
-**Missing** files are:
+__**Missing** files are__:
   - stm32hal.h - this is a placeholder for a set of includes like `stm32f215xx.h`, `stm32f2xx_hal.h`, `stm32f2xx_ll_utils.h` for a given MCU.
   - stm32utils.h which should contain a function for interrupt testing, like
 
@@ -271,12 +271,12 @@ namespace stm32utils {
 }
 ```
 
-Some interfaces need HAL callbacks. `logfreertoscmsisswo.h` needs such a function:
+Some interfaces need HAL callbacks. `logfreertosstmhal.h` needs such a function:
 
 ```cpp
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   if(huart == &huart3) {
-    nowtech::LogFreeRtosCmsisSwo::transmitFinished();
+    nowtech::logfreertosstmhal::transmitFinished();
   }
   else { // nothing to do
   }

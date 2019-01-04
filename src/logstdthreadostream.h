@@ -135,10 +135,6 @@ namespace nowtech {
 
     uint32_t mNextGivenTaskId = cInvalidGivenTaskId + 1u;
 
-    /// True if the other transmission buffer is being transmitted. This is
-    /// defined here because OS-specific functionality is here.
-    std::atomic<bool> *mProgressFlag;
-
     /// True if the partially filled buffer should be sent. This is
     /// defined here because OS-specific functionality is here.
     std::atomic<bool> *mRefreshNeeded;

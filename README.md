@@ -259,7 +259,7 @@ One of these headers, and if present the related .cpp is also needed:
   - logstdthreadostream.h
   - logstdthreadostream.cpp
 
-__**Missing** files are__:
+_**Missing** files are_:
   - stm32hal.h - this is a placeholder for a set of includes like `stm32f215xx.h`, `stm32f2xx_hal.h`, `stm32f2xx_ll_utils.h` for a given MCU.
   - stm32utils.h which should contain a function for interrupt testing, like
 

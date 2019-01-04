@@ -25,6 +25,7 @@
 #define NOWTECH_LOG_CMSISSWO_INCLUDED
 
 #include "log.h"
+#include "stm32utils.h"
 #include "cmsis_os.h"  // we use only an assembly macro, nothing more CMSIS-related
 
 namespace nowtech {
@@ -43,6 +44,16 @@ namespace nowtech {
     /// This object is not intended to be deleted, so control should never
     /// get here.
     virtual ~LogCmsisSwo() {
+    }
+
+    /// Returns true if we are in an ISR.
+    static bool isInterrupt() noexcept {
+      return stm32utils::isInterrupt();
+    }
+
+    /// Returns empty string.
+    virtual const char * const getThreadName(uint32_t const aHandle) noexcept {
+      return "";
     }
 
     /// Returns nullptr.

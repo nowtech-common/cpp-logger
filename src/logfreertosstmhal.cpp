@@ -27,6 +27,6 @@ UART_HandleTypeDef* nowtech::LogFreeRtosStmHal::sSerialDescriptor;
 std::atomic<bool> *nowtech::LogFreeRtosStmHal::sProgressFlag;
 std::atomic<bool> *nowtech::LogFreeRtosStmHal::sRefreshNeeded;
 
-extern "C" void logRefreshNeeded(TimerHandle_t) {
+extern "C" void logRefreshNeededFreeRtosStmHal(TimerHandle_t) {
   nowtech::LogFreeRtosStmHal::refreshNeeded();
 }

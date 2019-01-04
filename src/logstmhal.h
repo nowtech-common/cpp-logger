@@ -26,6 +26,7 @@
 
 #include "log.h"
 #include "stm32hal.h"
+#include "stm32utils.h"
 
 namespace nowtech {
 
@@ -54,6 +55,11 @@ namespace nowtech {
     /// This object is not intended to be deleted, so control should never
     /// get here.
     virtual ~LogStmHal() {
+    }
+
+    /// Returns true if we are in an ISR.
+    static bool isInterrupt() noexcept {
+      return stm32utils::isInterrupt();
     }
 
     /// Returns a textual representation of the given thread ID.

@@ -25,6 +25,6 @@
 
 std::atomic<bool> *nowtech::LogFreeRtosCmsisSwo::sRefreshNeeded;
 
-extern "C" void logRefreshNeeded(TimerHandle_t) {
+extern "C" void logRefreshNeededFreeRtosCmsisSwo(TimerHandle_t) {
   nowtech::LogFreeRtosCmsisSwo::refreshNeeded();
 }

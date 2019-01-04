@@ -73,6 +73,7 @@ nowtech::Log::Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexce
   , mConfig(aConfig)
   , mChunkSize(aConfig.chunkSize) {
   sInstance = this;
+  mKeepRunning.store(true);
   mOsInterface.createTransmitterThread(this, logTransmitterThreadFunction);
   if(aConfig.allowShiftChainingCalls) {
     mShiftChainingCallBuffers = new char[(std::numeric_limits<TaskIdType>::max() + static_cast<LogSizeType>(1u)) * mChunkSize];
@@ -293,7 +294,7 @@ nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType con
     return nowtech::Chunk();
   }
 }
-    
+
 nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept {
   if(!mOsInterface.isInterrupt() || mConfig.logFromIsr) {
     TaskIdType taskId = aTaskId == Chunk::cInvalidTaskId ? getCurrentTaskId() : aTaskId;

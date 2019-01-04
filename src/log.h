@@ -402,7 +402,7 @@ namespace nowtech {
 
     Chunk& operator=(Chunk const &aChunk) noexcept {
       mIndex = 1;
-      for(int i = 0; i < mChunkSize; i++) {
+      for(LogSizeType i = 0; i < mChunkSize; i++) {
         mChunk[i] = aChunk.mChunk[i];
       }
       return *this;
@@ -534,7 +534,7 @@ namespace nowtech {
     LogOsInterface &mOsInterface;
 
     /// Can be used to shut off the transmitter thread, if any
-    std::atomic<bool> mKeepRunning = true;
+    std::atomic<bool> mKeepRunning;
 
     /// The user-defined configuration values for message header and number
     /// rendering and else.

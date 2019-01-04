@@ -29,13 +29,14 @@
 #include "FreeRTOS.h"
 #include "projdefs.h"
 #include "task.h"
+#include "semphr.h"
 #include "timers.h"
 #include "queue.h"
 #include "stm32hal.h"
 #include "stm32utils.h"
 #include <atomic>
 
-extern "C" void logRefreshNeeded(TimerHandle_t);
+extern "C" void logRefreshNeededFreeRtosStmHal(TimerHandle_t);
 
 namespace nowtech {
 
@@ -63,6 +64,9 @@ namespace nowtech {
     /// period of time.
     TimerHandle_t mRefreshTimer;
 
+    /// Used for lock and unlock calls.
+    SemaphoreHandle_t         mApiGuard;
+
     /// True if the other transmission buffer is being transmitted. This is
     /// defined here because OS-specific functionality is here.
     static std::atomic<bool> *sProgressFlag;
@@ -85,13 +89,26 @@ namespace nowtech {
       , mTaskStackLength(aTaskStackLength)
       , mPriority(aPriority) {
       mQueue = xQueueCreate(aConfig.queueLength, mChunkSize);
-      mRefreshTimer = xTimerCreate("LogRefreshTimer", pdMS_TO_TICKS(mRefreshPeriod), pdFALSE, nullptr, logRefreshNeeded);
+      mRefreshTimer = xTimerCreate("LogRefreshTimer", pdMS_TO_TICKS(mRefreshPeriod), pdFALSE, nullptr, logRefreshNeededFreeRtosStmHal);
+      mApiGuard = xSemaphoreCreateMutex();
       sSerialDescriptor = aSerialDescriptor;
     }
 
     /// This object is not intended to be deleted, so control should never
     /// get here.
     virtual ~LogFreeRtosStmHal() {
+      vQueueDelete(mQueue);
+      xTimerDelete(mRefreshTimer, 0);
+      vSemaphoreDelete(mApiGuard);
+    }
+
+    /// Returns true if we are in an ISR.
+    static bool isInterrupt() noexcept {
+      return stm32utils::isInterrupt();
+    }
+
+    /// Does nothing, so a call to Log::registerCurrentTask(char const * const aTaskName) won't succeed.
+    virtual void registerThreadName(char const * const) noexcept {
     }
 
     /// Returns the task name.
@@ -123,6 +140,11 @@ namespace nowtech {
     /// which will call Log.transmitterThread.
     virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept {
       xTaskCreate(aThreadFunc, "logtransmitter", mTaskStackLength, aLog, mPriority, &mTaskHandle);
+    }
+
+    /// Joins the thread.
+    virtual void joinTransmitterThread() noexcept {
+      vTaskDelete(mTaskHandle);
     }
 
     /// Enqueues the chunks, possibly blocking if the queue is full.
@@ -195,6 +217,15 @@ namespace nowtech {
       sRefreshNeeded->store(true);
     }
 
+    /// Calls az OS-specific lock to acquire a critical section, if implemented
+    virtual void lock() noexcept {
+      xSemaphoreTakeFromISR(mApiGuard, NULL);
+    }
+
+    /// Calls az OS-specific lock to release critical section, if implemented
+    virtual void unlock() noexcept {
+      xSemaphoreGiveFromISR(mApiGuard, NULL);
+    }
   };
 
 } //namespace nowtech

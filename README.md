@@ -259,6 +259,18 @@ One of these headers, and if present the related .cpp is also needed:
   - logstdthreadostream.h
   - logstdthreadostream.cpp
 
+**Missing** files are:
+  - stm32hal.h - this is a placeholder for a set of includes like `stm32f215xx.h`, `stm32f2xx_hal.h`, `stm32f2xx_ll_utils.h` for a given MCU.
+  - stm32utils.h which should contain a function for interrupt testing, like
+
+```cpp
+namespace stm32utils {
+  inline bool isInterrupt() noexcept {
+    return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
+  }
+}
+```
+
 Some interfaces need HAL callbacks. `logfreertoscmsisswo.h` needs such a function:
 
 ```cpp

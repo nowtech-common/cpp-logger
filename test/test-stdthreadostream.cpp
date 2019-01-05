@@ -80,12 +80,28 @@ int main() {
     Log::i() << nowtech::LogApp::cSystem << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
     Log::i() << uint8 << ' ' << int8 << Log::end;
     Log::i() << LC::cX2 << uint8 << int8 << Log::end;
-    Log::i() << "C-string " << int8 << Log::end;
     Log::i() << Log::end;
   }
   catch(std::exception &e) {
     Log::i() << "Exception: " << e.what() << Log::end;
   }
+
+  Log::i() << "int8: " << static_cast<int8_t>(123) << Log::end;
+  Log::i() << "int16: " << static_cast<int16_t>(123) << Log::end;
+  Log::i() << "int32: " << static_cast<int32_t>(123) << Log::end;
+  Log::i() << "int64: " << static_cast<int64_t>(123) << Log::end;
+  Log::i() << "uint8: " << static_cast<uint8_t>(123) << Log::end;
+  Log::i() << "uint16: " << static_cast<uint16_t>(123) << Log::end;
+  Log::i() << "uint32: " << static_cast<uint32_t>(123) << Log::end;
+  Log::i() << "uint64: " << static_cast<uint64_t>(123) << Log::end;
+  Log::i() << "float: " << 1.234567890f << Log::end;
+  Log::i() << "double: " << -1.234567890 << Log::end;
+  Log::i() << "float: " << -123.4567890f << Log::end;
+  Log::i() << "double: " << 123.4567890 << Log::end;
+  Log::i() << "float: " << -0.01234567890f << Log::end;
+  Log::i() << "double: " << 0.01234567890 << Log::end;
+  Log::i() << "bool:" << true << Log::end;
+  Log::i() << "bool:" << false << Log::end;
 
   for(int32_t i = 0; i < threadCount; ++i) {
     threads[i] = std::thread(delayedLog, i);

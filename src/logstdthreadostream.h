@@ -100,8 +100,8 @@ namespace nowtech {
       std::unique_lock<std::mutex> mLock;
       std::condition_variable      mConditionVariable;
       std::thread                  mThread;
-      std::atomic<bool>            mKeepRunning = true;
-      std::atomic<bool>            mAlarmed     = false;
+      std::atomic<bool>            mKeepRunning;
+      std::atomic<bool>            mAlarmed;
 
     public:
       FreeRtosTimer(uint32_t const aTimeout, std::function<void()> aLambda)
@@ -109,6 +109,8 @@ namespace nowtech {
       , mLambda(aLambda) 
       , mLock(mMutex)
       , mThread(&nowtech::LogStdThreadOstream::FreeRtosTimer::run, this) {
+        mKeepRunning.store(true);
+        mAlarmed.store(false);
       }
 
       ~FreeRtosTimer() noexcept {
@@ -167,7 +169,7 @@ namespace nowtech {
     virtual void registerThreadName(char const * const aTaskName) noexcept {
       NameId nameId { std::string(aTaskName), mNextGivenTaskId };
       ++mNextGivenTaskId;
-      mTaskNamesIds.insert(std::pair(std::this_thread::get_id(), nameId));
+      mTaskNamesIds.insert(std::pair<std::thread::id, NameId>(std::this_thread::get_id(), nameId));
     }
 
     /// Returns the task name. This is a dummy and inefficient implementation,

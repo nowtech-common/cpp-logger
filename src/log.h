@@ -747,32 +747,53 @@ private:
     Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
     Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
 
-    template<typename T>
-    void append(Chunk &aChunk, LogFormat& aFormat, T const aValue) noexcept {
-      /// avoid too many template instantiations
-      if(std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value || std::is_same<T, int32_t>::value) {
-        append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
-      }
-      else if(std::is_same<T, uint8_t>::value || std::is_same<T, uint16_t>::value || std::is_same<T, uint32_t>::value) {
-        append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
-      }
-      else if(std::is_same<T, int64_t>::value) {
-        append(aChunk, static_cast<int64_t>(aValue), static_cast<int64_t>(aFormat.base), aFormat.fill);
-      }
-      else if(std::is_same<T, uint64_t>::value) {
-        append(aChunk, static_cast<uint64_t>(aValue), static_cast<uint64_t>(aFormat.base), aFormat.fill);
-      }
-      else if(std::is_same<T, float>::value || std::is_same<T, double>::value) {
-        append(aChunk, static_cast<double>(aValue), aFormat.fill);
-      }
-      else {
-        append(aChunk, "-=unknown=-");
-      }
-    }
-
-    template<>
     void append(Chunk &aChunk, LogFormat& aFormat, char const * const aValue) noexcept {
       append(aChunk, aValue);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, int8_t const aValue) noexcept {
+      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, int16_t const aValue) noexcept {
+      append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void yappend(Chunk &aChunk, LogFormat& aFormat, int32_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<int32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, int64_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<int64_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, uint8_t const aValue) noexcept {
+      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, uint16_t const aValue) noexcept {
+      append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, uint32_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<uint32_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, uint64_t const aValue) noexcept {
+      append(aChunk, aValue, static_cast<uint64_t>(aFormat.base), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, float const aValue) noexcept {
+      append(aChunk, static_cast<double>(aValue), aFormat.fill);
+    }
+
+    void append(Chunk &aChunk, LogFormat& aFormat, double const aValue) noexcept {
+      append(aChunk, aValue, aFormat.fill);
+    }
+
+    template<typename T>
+    void append(Chunk &aChunk, LogFormat& aFormat, T const aValue) noexcept {
+      append(aChunk, "-=unknown=-");
     }
 
     void append(Chunk &aChunk, bool const aBool) noexcept {
@@ -964,7 +985,6 @@ private:
     }
     return *this;
   }
-
 } // namespace nowtech
 
 typedef nowtech::Log Log;

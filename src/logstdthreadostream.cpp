@@ -23,6 +23,8 @@
 
 #include "logstdthreadostream.h"
 
+constexpr uint32_t nowtech::LogStdThreadOstream::cEnqueuePollDelay;
+
 void nowtech::LogStdThreadOstream::FreeRtosQueue::send(char const * const aChunkStart, bool const aBlocks) noexcept {
   bool success;
   do {

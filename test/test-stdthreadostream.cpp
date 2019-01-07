@@ -26,7 +26,7 @@
 #include <cstdint>
 #include <thread>
 
-// clang++ -std=c++17 -Isrc src/log.cpp src/logstdthreadostream.cpp src/logutil.cpp test/test-stdthreadostream.cpp -lpthread -g3 -Og -o test-stdthreadostream
+// clang++ -std=c++14 -Isrc src/log.cpp src/logstdthreadostream.cpp src/logutil.cpp test/test-stdthreadostream.cpp -lpthread -g3 -Og -o test-stdthreadostream
 
 constexpr int32_t threadCount = 10;
 
@@ -67,17 +67,23 @@ int main() {
   int64_t const int64 = -123456789012345;
 
   Log::registerCurrentTask("main");
+
   Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
   Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
   Log::send("uint64: ", uint64, " int64: ", int64);
   Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
+  
+  Log::i(nowtech::LogApp::cSystem) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
+  Log::n(nowtech::LogApp::cSystem) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
+  Log::i() << "uint64: " << uint64 << " int64: " << int64 << Log::end;
+  Log::n() << "uint64: " << uint64 << " int64: " << int64 << Log::end;
 
   uint8_t const uint8 = 42;
   int8_t const int8 = -42;
 
   try {
-    Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
-    Log::i() << nowtech::LogApp::cSystem << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
+    Log::i(nowtech::LogApp::cSystem) << uint8 << ' ' << int8 << Log::end;
+    Log::i(nowtech::LogApp::cSystem) << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
     Log::i() << uint8 << ' ' << int8 << Log::end;
     Log::i() << LC::cX2 << uint8 << int8 << Log::end;
     Log::i() << Log::end;

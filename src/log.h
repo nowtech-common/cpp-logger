@@ -74,7 +74,9 @@ namespace nowtech {
   /// if the log is invoked like Log::send(nowtech::LogApp::cSystem, "stuff to log")
   /// If registration is omitted, the above call will do nothing.
   /// Regural calls like Log::send("stuff to log") will always have effect.
+  /// User code must not use the cInvalid value.
   enum class LogApp : uint8_t {
+    cInvalid,
     cSystem,
     cWatchdog
   };
@@ -434,7 +436,7 @@ namespace nowtech {
 
   /// Dummy type to use in << chain as end marker.
   enum class LogShiftChainMarker : uint8_t {
-    cEnd = 0u
+    cEnd      = 0u
   };
 
   class LogShiftChainHelper final {
@@ -601,14 +603,24 @@ namespace nowtech {
       return sInstance->mRegisteredApps.find(aApp) != sInstance->mRegisteredApps.end();
     }
 
-    static Log& i() noexcept {
-      return *sInstance;
-    }
-
     /// Transmitter thread implementation.
     void transmitterThreadFunction() noexcept;
 
-    /// Starts a << operator chain with the specified argument
+    /// Starts a << operator chain with no argument
+    /// Prefer using this starter instead of directly accessing the Log object,
+    /// because this way less templates will be instantiated.
+    static LogShiftChainHelper i() noexcept;
+
+    /// Starts a << operator chain with the specified app
+    static LogShiftChainHelper i(LogApp const aApp) noexcept;
+
+    /// Starts a << operator chain with no argument, without printing header.
+    static LogShiftChainHelper n() noexcept;
+
+    /// Starts a << operator chain with the specified app, without printing header.
+    static LogShiftChainHelper n(LogApp const aApp) noexcept;
+
+    /// Starts a << operator chain with the specified argument.
     template<typename ArgumentType>
     LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept {
       if(mShiftChainingCallBuffers) {

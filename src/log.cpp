@@ -201,6 +201,70 @@ void nowtech::Log::transmitterThreadFunction() noexcept {
   }
 }
 
+nowtech::LogShiftChainHelper nowtech::Log::i() noexcept {
+  if(sInstance->mShiftChainingCallBuffers) {
+    nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
+    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId);
+    if(appender.isValid()) {
+      return nowtech::LogShiftChainHelper(sInstance, appender);
+    }
+    else {
+      return nowtech::LogShiftChainHelper();
+    }
+  }
+  else {
+    return nowtech::LogShiftChainHelper();
+  }
+}
+
+nowtech::LogShiftChainHelper Log::i(LogApp const aApp) noexcept {
+  if(sInstance->mShiftChainingCallBuffers) {
+    nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
+    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId, aApp);
+    if(appender.isValid()) {
+      return nowtech::LogShiftChainHelper(sInstance, appender);
+    }
+    else {
+      return nowtech::LogShiftChainHelper();
+    }
+  }
+  else {
+    return nowtech::LogShiftChainHelper();
+  }
+}
+
+nowtech::LogShiftChainHelper Log::n() noexcept {
+  if(sInstance->mShiftChainingCallBuffers) {
+    nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
+    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId);
+    if(appender.isValid()) {
+      return nowtech::LogShiftChainHelper(sInstance, appender);
+    }
+    else {
+      return nowtech::LogShiftChainHelper();
+    }
+  }
+  else {
+    return nowtech::LogShiftChainHelper();
+  }
+}
+
+nowtech::LogShiftChainHelper Log::n(LogApp const aApp) noexcept {
+  if(sInstance->mShiftChainingCallBuffers) {
+    nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
+    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId, aApp);
+    if(appender.isValid()) {
+      return nowtech::LogShiftChainHelper(sInstance, appender);
+    }
+    else {
+      return nowtech::LogShiftChainHelper();
+    }
+  }
+  else {
+    return nowtech::LogShiftChainHelper();
+  }
+}
+
 nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogApp const aApp) noexcept {
   if(mShiftChainingCallBuffers) {
     TaskIdType taskId = getCurrentTaskId();

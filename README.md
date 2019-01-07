@@ -7,7 +7,7 @@ or larger MCUs.
 
 There are two log call flavours:
   - The all-purpose function call-like solution, but it heavily relies on variadic templates, stack usage may be in the order of kilobytes for many passed parameters. **This holds for all the tasks using the log system.** For low stack usage, avoid many parameters. For small compiled size, avoid many parameter footprints (i.e. avoid many template instantiations).
-  - The `std::ostream`-like solution, which uses minimal stack. It has only one limitation: it is unable to surpress the header like the other one's sendNoHeader call. However, the solution is easy and cheap: give the interested threads just as much extra stack space to be able to handle simple all-prupose calls. Discarding headers is interesting only if there are many simple homogeneous calls.
+  - The `std::ostream`-like solution, which uses minimal stack. Discarding headers is interesting only if there are many simple homogeneous calls, or the available bandwidth is limited.
 
 The library reserves some buffers and a queue during construction, and makes
 small heap allocations during thread / log app registrations. After it, no heap
@@ -169,10 +169,16 @@ Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
 #### std::ostream-like solution
 
 The following entry points are available:
-  - `LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept;`
-  - `LogShiftChainHelper operator<<(LogApp const aApp) noexcept;`
-  - `LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;`
-  - `LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;`
+  - Singleton access:
+    - `static LogShiftChainHelper i() noexcept;` -- prints header, logs unconditionally
+    - `static LogShiftChainHelper i(LogApp const aApp) noexcept;` -- logs with header if the app is enabled
+    - `static LogShiftChainHelper n() noexcept;` -- doesn't print header, logs unconditionally
+    - `static LogShiftChainHelper n(LogApp const aApp) noexcept;` -- logs without header if the app is enabled
+  - Member access (no header surpression possible):
+    - `LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept;` -- not recommended, the singleton version will avoid unnecessary template instantiations
+    - `LogShiftChainHelper operator<<(LogApp const aApp) noexcept;` -- logs with header if the app is enabled
+    - `LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;` -- logs with header unconditionally
+    - `LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;` -- just for fun, does nothing
 
 Due to operator overloading, static access is not available, so the Log instance has to be required:
 

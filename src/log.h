@@ -122,8 +122,13 @@ namespace nowtech {
     /// If true, use of Log << something << to << log << Log::end; calls will
     /// be allowed from registered threads (but NOT from ISR).
     /// This requires pre-allocating 256 * chunkSize bytes of memory, but lets
-    /// reduce the stack sizes dramatically.
+    /// reduce the stack sizes dramatically in contrast to the variadic template calls.
     bool allowShiftChainingCalls = true;
+
+    /// If false, the variadic template calls (send... and sendNoHeader...) will be placed,
+    /// but return immediately without doing anything at all. This is useful to remind
+    /// the developer working with limited stack to use the shift chain calls.
+    bool allowVariadicTemplatesWork = true;
 
     /// If true, logging will work from ISR.
     bool logFromIsr = false;
@@ -623,7 +628,7 @@ namespace nowtech {
     /// Starts a << operator chain with the specified argument.
     template<typename ArgumentType>
     LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept {
-      if(mShiftChainingCallBuffers) {
+      if(mShiftChainingCallBuffers != nullptr) {
         TaskIdType taskId = getCurrentTaskId();
         Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId);
         if(appender.isValid()) {
@@ -651,10 +656,14 @@ namespace nowtech {
     /// If aApp is registered, calls the normal send to process the arguments
     template<typename... Args>
     static void send(LogApp aApp, Args... args) noexcept {
-      char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId, aApp);
-      if(appender.isValid()) {
-        sInstance->doSend(appender, args...);
+      if(sInstance->mConfig.allowVariadicTemplatesWork) {
+        char chunk[sInstance->mChunkSize];
+        Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId, aApp);
+        if(appender.isValid()) {
+          sInstance->doSend(appender, args...);
+        }
+        else { // nothing to do
+        }
       }
       else { // nothing to do
       }
@@ -681,10 +690,14 @@ namespace nowtech {
     /// automatically in the end.
     template<typename... Args>
     static void send(Args... args) noexcept {
-      char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId);
-      if(appender.isValid()) {
-        sInstance->doSend(appender, args...);
+      if(sInstance->mConfig.allowVariadicTemplatesWork) {
+        char chunk[sInstance->mChunkSize];
+        Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId);
+        if(appender.isValid()) {
+          sInstance->doSend(appender, args...);
+        }
+        else { // nothing to do
+        }
       }
       else { // nothing to do
       }
@@ -693,10 +706,14 @@ namespace nowtech {
     /// Similar to send but does not emit any preconfigured header.
     template<typename... Args>
     static void sendNoHeader(LogApp aApp, Args... args) noexcept {
-      char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId, aApp);
-      if(appender.isValid()) {
-        sInstance->doSend(appender, args...);
+      if(sInstance->mConfig.allowVariadicTemplatesWork) {
+        char chunk[sInstance->mChunkSize];
+        Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId, aApp);
+        if(appender.isValid()) {
+          sInstance->doSend(appender, args...);
+        }
+        else { // nothing to do
+        }
       }
       else { // nothing to do
       }
@@ -705,10 +722,14 @@ namespace nowtech {
     /// Similar to send but does not emit any preconfigured header.
     template<typename... Args>
     static void sendNoHeader(Args... args) noexcept {
-      char chunk[sInstance->mChunkSize];
-      Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId);
-      if(appender.isValid()) {
-        sInstance->doSend(appender, args...);
+      if(sInstance->mConfig.allowVariadicTemplatesWork) {
+        char chunk[sInstance->mChunkSize];
+        Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId);
+        if(appender.isValid()) {
+          sInstance->doSend(appender, args...);
+        }
+        else { // nothing to do
+        }
       }
       else { // nothing to do
       }

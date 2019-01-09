@@ -59,6 +59,7 @@ int main() {
   logConfig.taskRepresentation = nowtech::LogConfig::TaskRepresentation::cName;
   logConfig.refreshPeriod      = 200u;
  // logConfig.allowShiftChainingCalls = false;
+  logConfig.allowVariadicTemplatesWork = false;
   nowtech::LogStdThreadOstream osInterface(std::cout, logConfig);
   nowtech::Log log(osInterface, logConfig);
   Log::registerApp(nowtech::LogApp::cSystem, "system");

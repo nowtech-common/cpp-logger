@@ -191,6 +191,25 @@ Log::i() << Log::end;
 ```
 
 **Important**: omitting Log::end from the end of the clause makes the logged content mix with contents from subsequent calls. Of course, if the once created instance is available at the call location, it can be used instead of the static call returning the same singleton.
+
+This solution even allows distributed construction of a log line. In this example I write 16 bytes to a line in a way that permits arrays with size not multiple of 16 to be written:
+
+```cpp
+auto log = Log::i(nowtech::LogApp::cSystem);
+int32_t i;
+for(i = 0; i < chunkLengthOut; ++i) {
+  if(i > 0 && i % 16 == 0) {
+    log << Log::end;
+    // some wait may be needed for long arrays
+    log = Log::i(nowtech::LogApp::cSystem);
+  }
+  else { // nothing to do
+  }
+  log << LC::cX2 << puffer[i] << ' ';
+}
+log << Log::end;
+```
+
 Available parameter types to print:
 
 Type        |Printed value          |If it can be preceded by a LogFormat parameter to change the style

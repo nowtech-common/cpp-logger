@@ -263,7 +263,7 @@ logstdthreadostream.h  |std::ostream    |not yet           |An interface using S
 
 ## Compiling
 
-The compiler must support the C++14 standard. The library was taken from a set of libraries. Maybe some HAL-related umbrella header file is missing, which is easy to reconstruct.
+The compiler must support the C++14 standard.
 
 Compulsory files are:
   - BanCopyMove.h

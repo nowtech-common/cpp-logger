@@ -210,6 +210,8 @@ for(i = 0; i < chunkLengthOut; ++i) {
 log << Log::end;
 ```
 
+**Important**: there is, however, no mechanism implemented to manage or inhibit creating two simultaneous such sessions from the same thread. Such a mechanism would require an additional array with more memory requirement. It is the application writer's responsibility to prevent such situations.
+
 Available parameter types to print:
 
 Type        |Printed value          |If it can be preceded by a LogFormat parameter to change the style

@@ -238,15 +238,8 @@ of the numbers to log.
 
 ## OS interface
 
-Doxygen docs for `nowtech::LogOsInterface` follows:
-
-Abstract base class for OS/architecture/dependent log functionality
-under the Log class. These objects can be chained under the containing
-Log  objects to let logging happen into several sinks. The instance
-directly referenced by the Log object will contain OS thread to let
-the actual write into the sink(s) happen independently of the
-logging.  
-Since this object requires OS resources, it must be constructed
+Abstract base class for OS/architecture-dependent log functionality
+under the Log class. Since this object requires OS resources, it must be constructed
 during initialization of the application to be sure all resources are
 granted.
 

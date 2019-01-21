@@ -21,7 +21,7 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "cmsis_os_utils.h"
+#include "CmsisOsUtils.h"
 
 bool nowtech::OsUtil::sMemoryAllocationFailed = false;
 

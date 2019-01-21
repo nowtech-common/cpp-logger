@@ -24,7 +24,7 @@
 #ifndef NOWTECH_LOG_STD_THREAD_OSTREAM_INCLUDED
 #define NOWTECH_LOG_STD_THREAD_OSTREAM_INCLUDED
 
-#include "log.h"
+#include "Log.h"
 #include <mutex>
 #include <atomic>
 #include <thread>

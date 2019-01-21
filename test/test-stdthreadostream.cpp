@@ -21,12 +21,12 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "logstdthreadostream.h"
+#include "LogStdThreadOstream.h"
 #include <iostream>
 #include <cstdint>
 #include <thread>
 
-// clang++ -std=c++14 -Isrc src/log.cpp src/logstdthreadostream.cpp src/logutil.cpp test/test-stdthreadostream.cpp -lpthread -g3 -Og -o test-stdthreadostream
+// clang++ -std=c++14 -Isrc src/Log.cpp src/LogStdThreadOstream.cpp src/LogUtil.cpp test/test-stdthreadostream.cpp -lpthread -g3 -Og -o test-stdthreadostream
 
 constexpr int32_t threadCount = 10;
 

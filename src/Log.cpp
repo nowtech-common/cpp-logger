@@ -21,8 +21,8 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "log.h"
-#include "logutil.h"
+#include "Log.h"
+#include "LogUtil.h"
 
 void nowtech::Chunk::push(char const mChar) noexcept {
   mChunk[mIndex++] = mChar;

@@ -21,7 +21,7 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "logstdthreadostream.h"
+#include "LogStdThreadOstream.h"
 
 constexpr uint32_t nowtech::LogStdThreadOstream::cEnqueuePollDelay;
 

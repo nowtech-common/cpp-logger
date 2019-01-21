@@ -21,40 +21,29 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NOWTECH_LOG_STMHAL_INCLUDED
-#define NOWTECH_LOG_STMHAL_INCLUDED
+#ifndef NOWTECH_LOG_CMSISSWO_INCLUDED
+#define NOWTECH_LOG_CMSISSWO_INCLUDED
 
-#include "log.h"
-#include "stm32hal.h"
+#include "Log.h"
 #include "stm32utils.h"
+#include "cmsis_os.h"  // we use only an assembly macro, nothing more CMSIS-related
 
 namespace nowtech {
 
-  /// Class implementing log interface for STM HAL alone without any buffering or concurrency support.
-  class LogStmHal final : public LogOsInterface {
-  private:
-    /// The STM HAL serial port descriptor to use.
-    UART_HandleTypeDef* mSerialDescriptor;
-
-    /// Timeout for sending in ms
-    uint32_t const mUartTimeout;
-
+  /// Class implementing log interface for CMSIS SWO alone without any buffering or concurrency support.
+  /// The ITM_SendChar contains a busy wait loop without timeout. If this is an issue,
+  /// the function should be implemented with a timeout.
+  class LogCmsisSwo final : public LogOsInterface {
   public:
     /// Sets parameters and creates the mutex for locking.
-    /// @param aSerialDescriptor the STM HAL serial port descriptor to use
     /// @param aConfig config.
-    /// @param aUartTimeout timeout for sending perhaps in ms
-    LogStmHal(UART_HandleTypeDef* const aSerialDescriptor
-      , LogConfig const & aConfig
-      , uint32_t const aUartTimeout) noexcept
-      : LogOsInterface(aConfig)
-      , mSerialDescriptor(aSerialDescriptor)
-      , mUartTimeout(aUartTimeout) {
+    LogCmsisSwo(LogConfig const & aConfig) noexcept
+      : LogOsInterface(aConfig) {
     }
 
     /// This object is not intended to be deleted, so control should never
     /// get here.
-    virtual ~LogStmHal() {
+    virtual ~LogCmsisSwo() {
     }
 
     /// Returns true if we are in an ISR.
@@ -62,13 +51,12 @@ namespace nowtech {
       return stm32utils::isInterrupt();
     }
 
-    /// Returns a textual representation of the given thread ID.
-    /// @return nullptr.
-    virtual char const * const getThreadName(uint32_t const aHandle) noexcept {
-      return nullptr;
-    };
+    /// Returns empty string.
+    virtual const char * const getThreadName(uint32_t const aHandle) noexcept {
+      return "";
+    }
 
-    /// @return nullptr.
+    /// Returns nullptr.
     virtual const char * const getCurrentThreadName() noexcept {
       return nullptr;
     }
@@ -90,20 +78,18 @@ namespace nowtech {
     /// Sends the chunk contents immediately.
     virtual void push(char const * const aChunkStart, bool const) noexcept {
       LogSizeType length;
-      char buffer[mChunkSize];
-      for(length = 0u; length < mChunkSize - 1u; ++length) {
-        buffer[length] = aChunkStart[length + 1u];
+      for(length = 0; length < mChunkSize - 1; ++length) {
+        ITM_SendChar(static_cast<uint32_t>(aChunkStart[length + 1]));
         if(aChunkStart[length + 1] == '\n') {
           ++length;
           break;
         }
       }
-      HAL_UART_Transmit(mSerialDescriptor, reinterpret_cast<uint8_t*>(const_cast<char*>(buffer)), length, mUartTimeout);
     }
 
     /// Does nothing.
     virtual bool pop(char * const aChunkStart) noexcept {
-      return true;
+      return false;
     }
 
     /// Does nothing.
@@ -130,4 +116,4 @@ namespace nowtech {
 
 } //namespace nowtech
 
-#endif // NOWTECH_STMHAL_INCLUDED
+#endif // NOWTECH_LOG_CMSISSWO_INCLUDED

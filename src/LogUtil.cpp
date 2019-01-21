@@ -21,7 +21,7 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "logutil.h"
+#include "LogUtil.h"
 
 nowtech::Chunk const &nowtech::CircularBuffer::inspect(TaskIdType const aTaskId) noexcept {
   while(mInspectedCount < mCount && mFound.getTaskId() != aTaskId) {

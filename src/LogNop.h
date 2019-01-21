@@ -24,7 +24,7 @@
 #ifndef NOWTECH_LOG_NOP_INCLUDED
 #define NOWTECH_LOG_NOP_INCLUDED
 
-#include "log.h"
+#include "Log.h"
 
 namespace nowtech {
 

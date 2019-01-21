@@ -21,7 +21,7 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "logfreertosstmhal.h"
+#include "LogFreertosStmHal.h"
 
 UART_HandleTypeDef* nowtech::LogFreeRtosStmHal::sSerialDescriptor;
 std::atomic<bool> *nowtech::LogFreeRtosStmHal::sProgressFlag;

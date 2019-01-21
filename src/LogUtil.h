@@ -24,7 +24,7 @@
 #ifndef NOWTECH_LOGUTIL_INCLUDED
 #define NOWTECH_LOGUTIL_INCLUDED
 
-#include "log.h"
+#include "Log.h"
 #include <atomic>
 
 namespace nowtech {

@@ -21,32 +21,30 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NOWTECH_LOG_FREERTOS_STMHAL_INCLUDED
-#define NOWTECH_LOG_FREERTOS_STMHAL_INCLUDED
+#ifndef NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED
+#define NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED
 
-#include "log.h"
-#include "cmsis_os_utils.h"
+#include "Log.h"
+#include "CmsisOsUtils.h"
+#include "stm32f2xx_hal.h"
+#include "cmsis_os.h"  // we use only an assembly macro, nothing more CMSIS-related
 #include "FreeRTOS.h"
 #include "projdefs.h"
 #include "task.h"
 #include "semphr.h"
 #include "timers.h"
 #include "queue.h"
-#include "stm32hal.h"
 #include "stm32utils.h"
 #include <atomic>
 
-extern "C" void logRefreshNeededFreeRtosStmHal(TimerHandle_t);
+extern "C" void logRefreshNeededFreeRtosCmsisSwo(TimerHandle_t);
 
 namespace nowtech {
 
   /// Class implementing log interface for FreeRTOS and STM HAL as STM32CubeMX
   /// provides them.
-  class LogFreeRtosStmHal final : public LogOsInterface {
+  class LogFreeRtosCmsisSwo final : public LogOsInterface {
   private:
-    /// The STM HAL serial port descriptor to use.
-    static UART_HandleTypeDef* sSerialDescriptor;
-
     /// Stack length of the transmitter task. It should be large enough to
     /// accomodate Log.transmitStackBufferLength
     uint16_t const mTaskStackLength;
@@ -67,36 +65,29 @@ namespace nowtech {
     /// Used for lock and unlock calls.
     SemaphoreHandle_t         mApiGuard;
 
-    /// True if the other transmission buffer is being transmitted. This is
-    /// defined here because OS-specific functionality is here.
-    static std::atomic<bool> *sProgressFlag;
-
     /// True if the partially filled buffer should be sent. This is
     /// defined here because OS-specific functionality is here.
     static std::atomic<bool> *sRefreshNeeded;
 
   public:
     /// Sets parameters and creates the mutex for locking.
-    /// @param aSerialDescriptor the STM HAL serial port descriptor to use
     /// @param aConfig config.
     /// @param aTaskStackLength stack length of the transmitter task
     /// @param aPriority of the tranmitter task
-    LogFreeRtosStmHal(UART_HandleTypeDef* const aSerialDescriptor
-      , LogConfig const & aConfig
+    LogFreeRtosCmsisSwo(LogConfig const & aConfig
       , uint16_t const aTaskStackLength
       , UBaseType_t const aPriority) noexcept
       : LogOsInterface(aConfig)
       , mTaskStackLength(aTaskStackLength)
       , mPriority(aPriority) {
       mQueue = xQueueCreate(aConfig.queueLength, mChunkSize);
-      mRefreshTimer = xTimerCreate("LogRefreshTimer", pdMS_TO_TICKS(mRefreshPeriod), pdFALSE, nullptr, logRefreshNeededFreeRtosStmHal);
+      mRefreshTimer = xTimerCreate("LogRefreshTimer", pdMS_TO_TICKS(mRefreshPeriod), pdFALSE, nullptr, logRefreshNeededFreeRtosCmsisSwo);
       mApiGuard = xSemaphoreCreateMutex();
-      sSerialDescriptor = aSerialDescriptor;
     }
 
     /// This object is not intended to be deleted, so control should never
     /// get here.
-    virtual ~LogFreeRtosStmHal() {
+    virtual ~LogFreeRtosCmsisSwo() {
       vQueueDelete(mQueue);
       xTimerDelete(mRefreshTimer, 0);
       vSemaphoreDelete(mApiGuard);
@@ -117,7 +108,7 @@ namespace nowtech {
       return pcTaskGetName(reinterpret_cast<TaskHandle_t>(aHandle));
     }
 
-    /// Returns the current task name.
+    /// Returns the task name.
     /// Must not be called from ISR.
     virtual const char * const getCurrentThreadName() noexcept {
       return pcTaskGetName(nullptr);
@@ -173,13 +164,13 @@ namespace nowtech {
 
     /// Removes the oldest chunk from the queue.
     virtual bool pop(char * const aChunkStart) noexcept {
-      auto ret = xQueueReceive(mQueue, aChunkStart, nowtech::OsUtil::msToRtosTick(mPauseLength));
+      auto ret = xQueueReceive(mQueue, aChunkStart, pdMS_TO_TICKS(mPauseLength));
       return ret == pdTRUE ? true : false; // TODO remove
     }
 
     /// Pauses execution for the period given in the constructor.
     virtual void pause() noexcept {
-      nowtech::OsUtil::taskDelayMillis(mPauseLength);
+      vTaskDelay(pdMS_TO_TICKS(mPauseLength));
     }
 
     /// Transmits the data using the serial descriptor given in the constructor.
@@ -187,23 +178,10 @@ namespace nowtech {
     /// @param length length of data
     /// @param aProgressFlag address of flag to be set on transmission end.
     virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept {
-      sProgressFlag = aProgressFlag;
-      HAL_UART_Transmit_DMA(sSerialDescriptor, reinterpret_cast<uint8_t*>(const_cast<char*>(aBuffer)), aLength);
-    }
-
-    /// Sets the flag.
-    ///
-    /// Needs the following function with such a line in the application:
-    ///
-    /// extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-    ///   nowtech::LogFreeRtosStmHal::transmitFinished(huart);
-    /// }
-    static void transmitFinished(UART_HandleTypeDef *huart) noexcept {
-      if(huart == sSerialDescriptor) {
-        sProgressFlag->store(false);
+      for(LogSizeType i = 0; i < aLength; i++) {
+        ITM_SendChar(static_cast<uint32_t>(aBuffer[i]));
       }
-      else { // nothing to do
-      }
+      aProgressFlag->store(false);
     }
 
     /// Starts the timer after which a partially filled buffer should be sent.
@@ -230,4 +208,4 @@ namespace nowtech {
 
 } //namespace nowtech
 
-#endif // NOWTECH_LOG_FREERTOS_STMHAL_INCLUDED
+#endif /* NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED */

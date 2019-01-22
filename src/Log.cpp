@@ -1,34 +1,37 @@
-/*
- * Copyright 2018 Now Technologies Zrt.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
- * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+//
+// Copyright 2018 Now Technologies Zrt.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 
 #include "Log.h"
 #include "LogUtil.h"
 
 void nowtech::Chunk::push(char const mChar) noexcept {
-  mChunk[mIndex++] = mChar;
+  mChunk[mIndex] = mChar;
+  ++mIndex;
   if(mIndex == mChunkSize) {
     mOsInterface->push(mChunk, mBlocks);
     mIndex = 1u;
+  }
+  else { // nothing to do
   }
 }
 
@@ -38,7 +41,9 @@ extern "C" void logTransmitterThreadFunction(void *argument) {
 
 constexpr nowtech::LogFormat nowtech::LogConfig::cDefault;
 constexpr nowtech::LogFormat nowtech::LogConfig::cNone;
+constexpr nowtech::LogFormat nowtech::LogConfig::cB4;
 constexpr nowtech::LogFormat nowtech::LogConfig::cB8;
+constexpr nowtech::LogFormat nowtech::LogConfig::cB12;
 constexpr nowtech::LogFormat nowtech::LogConfig::cB16;
 constexpr nowtech::LogFormat nowtech::LogConfig::cB24;
 constexpr nowtech::LogFormat nowtech::LogConfig::cB32;
@@ -49,13 +54,15 @@ constexpr nowtech::LogFormat nowtech::LogConfig::cD5;
 constexpr nowtech::LogFormat nowtech::LogConfig::cD6;
 constexpr nowtech::LogFormat nowtech::LogConfig::cD7;
 constexpr nowtech::LogFormat nowtech::LogConfig::cD8;
+constexpr nowtech::LogFormat nowtech::LogConfig::cX1;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX2;
+constexpr nowtech::LogFormat nowtech::LogConfig::cX3;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX4;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX6;
 constexpr nowtech::LogFormat nowtech::LogConfig::cX8;
 
-constexpr char nowtech::Log::cUnknownApplicationName[8];
-constexpr char nowtech::Log::cDigit2char[16];
+constexpr char nowtech::Log::cUnknownApplicationName[cNameLength];
+constexpr char nowtech::Log::cDigit2char[nowtech::NumericSystem::cHexadecimal];
 
 nowtech::Log *nowtech::Log::sInstance;
 
@@ -82,30 +89,14 @@ nowtech::Log::Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexce
   }
 }
 
-void nowtech::Log::doRegisterCurrentTask() noexcept {
-  mOsInterface.lock();
-  if(mNextTaskId != Chunk::cIsrTaskId) {
-    uint32_t taskHandle = mOsInterface.getCurrentThreadId();
-    auto found = mTaskIds.find(taskHandle);
-    if(found == mTaskIds.end()) {
-      mTaskIds[taskHandle] = mNextTaskId;
-      if(mConfig.allowRegistrationLog) {
-        send("-=- Registered task: ", mOsInterface.getThreadName(taskHandle), " (", mNextTaskId, ") -=-");
-      }
-      else { // nothing to do
-      }
-      ++mNextTaskId;
-    }
-    else { // nothing to do
-    }
-  }
-  mOsInterface.unlock();
-}
-
 void nowtech::Log::doRegisterCurrentTask(char const * const aTaskName) noexcept {
   mOsInterface.lock();
   if(mNextTaskId != Chunk::cIsrTaskId) {
-    mOsInterface.registerThreadName(aTaskName);
+    if(aTaskName != nullptr) {
+      mOsInterface.registerThreadName(aTaskName);
+    }
+    else { // nothing to do
+    }
     uint32_t taskHandle = mOsInterface.getCurrentThreadId();
     auto found = mTaskIds.find(taskHandle);
     if(found == mTaskIds.end()) {
@@ -141,10 +132,10 @@ void nowtech::Log::transmitterThreadFunction() noexcept {
     // At this point the transmitBuffers must have free space for a chunk
     if(!transmitBuffers.hasActiveTask()) {
       if(circularBuffer.isEmpty()) {
-        transmitBuffers << circularBuffer.fetch();
+        static_cast<void>(transmitBuffers << circularBuffer.fetch());
       }
       else { // the circularbuffer may be full or not
-        transmitBuffers << circularBuffer.peek();
+        static_cast<void>(transmitBuffers << circularBuffer.peek());
         circularBuffer.pop();
       }
     }
@@ -187,7 +178,7 @@ void nowtech::Log::transmitterThreadFunction() noexcept {
         }
       }
       else { // the circular buffer is full
-        transmitBuffers << circularBuffer.peek();
+        static_cast<void>(transmitBuffers << circularBuffer.peek());
         circularBuffer.pop();
         circularBuffer.clearInspected();
       }
@@ -204,7 +195,7 @@ void nowtech::Log::transmitterThreadFunction() noexcept {
 nowtech::LogShiftChainHelper nowtech::Log::i() noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId);
+    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -220,7 +211,7 @@ nowtech::LogShiftChainHelper nowtech::Log::i() noexcept {
 nowtech::LogShiftChainHelper Log::i(LogApp const aApp) noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId, aApp);
+    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aApp);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -236,7 +227,7 @@ nowtech::LogShiftChainHelper Log::i(LogApp const aApp) noexcept {
 nowtech::LogShiftChainHelper Log::n() noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId);
+    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -252,7 +243,7 @@ nowtech::LogShiftChainHelper Log::n() noexcept {
 nowtech::LogShiftChainHelper Log::n(LogApp const aApp) noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + taskId * sInstance->mChunkSize, taskId, aApp);
+    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aApp);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -284,7 +275,7 @@ nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogApp const aApp) noexcep
 nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogFormat const &aFormat) noexcept {
   if(mShiftChainingCallBuffers != nullptr) {
     TaskIdType taskId = getCurrentTaskId();
-    Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId);
+    Chunk appender = startSend(mShiftChainingCallBuffers + (taskId * mChunkSize), taskId);
     if(appender.isValid()) {
       return LogShiftChainHelper(this, appender, aFormat);
     }
@@ -300,7 +291,7 @@ nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogFormat const &aFormat) 
 nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogShiftChainMarker const) noexcept {
   if(mShiftChainingCallBuffers != nullptr) {
     TaskIdType taskId = getCurrentTaskId();
-    Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId);
+    Chunk appender = startSend(mShiftChainingCallBuffers + (taskId * mChunkSize), taskId);
     if(appender.isValid()) {
       finishSend(appender);
     }
@@ -342,7 +333,7 @@ nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType con
   return appender;
 }
 
-nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept {
+nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp const aApp) noexcept {
   auto found = mRegisteredApps.find(aApp);
   if(found != mRegisteredApps.end()) {
     nowtech::Chunk appender = startSend(aChunkBuffer, aTaskId);
@@ -369,7 +360,7 @@ nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskId
   }
 }
 
-nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept {
+nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp const aApp) noexcept {
   if(mRegisteredApps.find(aApp) != mRegisteredApps.end()) {
     return startSendNoHeader(aChunkBuffer, aTaskId);
   }
@@ -402,8 +393,8 @@ void nowtech::Log::append(nowtech::Chunk &aChunk, double const aValue, uint8_t c
     }
     double mantissa = floor(log10(value));
     double normalized = value / pow(10.0, mantissa);
-    int firstDigit;
-    for(uint8_t i = 1; i < aDigitsNeeded; i++) {
+    int32_t firstDigit;
+    for(uint8_t i = 1u; i < aDigitsNeeded; i++) {
       firstDigit = static_cast<int>(normalized);
       if(firstDigit > 9) {
         firstDigit = 9;
@@ -412,7 +403,7 @@ void nowtech::Log::append(nowtech::Chunk &aChunk, double const aValue, uint8_t c
       }
       aChunk.push(cDigit2char[firstDigit]);
       normalized = 10.0 * (normalized - firstDigit);
-      if(i == 1) {
+      if(i == 1u) {
         aChunk.push('.');
       }
       else { // nothing to do
@@ -434,3 +425,19 @@ void nowtech::Log::append(nowtech::Chunk &aChunk, double const aValue, uint8_t c
     append(aChunk, static_cast<int32_t>(mantissa), static_cast<int32_t>(10), 0u);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

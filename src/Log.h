@@ -244,7 +244,7 @@ namespace nowtech {
 
     /// Returns true if the implementation can examine whether we are in an ISR and we are in fact in an ISR.
     /// By default it returns false.
-    static bool isInterrupt() noexcept {
+    virtual bool isInterrupt() noexcept {
       return false;
     }
 
@@ -264,12 +264,12 @@ namespace nowtech {
     /// Returns a textual representation of the given thread ID.
     /// This will be OS dependent.
     /// @return the thread ID text if called from a thread.
-    virtual char const * const getThreadName(uint32_t const aHandle) noexcept = 0;
+    virtual char const * getThreadName(uint32_t const aHandle) noexcept = 0;
 
     /// Returns a textual representation of the current thread ID.
     /// This will be OS dependent.
     /// @return the thread ID text if called from a thread.
-    virtual char const * const getCurrentThreadName() noexcept = 0;
+    virtual char const * getCurrentThreadName() noexcept = 0;
 
     /// Returns a value unique among threads.
     virtual uint32_t getCurrentThreadId() noexcept = 0;
@@ -1032,6 +1032,7 @@ typedef nowtech::Log Log;
 typedef nowtech::LogConfig LC;
 
 #endif // NOWTECH_LOG_INCLUDED
+
 
 
 

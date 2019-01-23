@@ -77,7 +77,7 @@ void nowtech::LogStdThreadOstream::FreeRtosTimer::run() noexcept {
   }
 }
 
-const char * const nowtech::LogStdThreadOstream::getThreadName(uint32_t const aHandle) noexcept {
+const char * nowtech::LogStdThreadOstream::getThreadName(uint32_t const aHandle) noexcept {
   char const * result = "";
   for(auto const &iterator : mTaskNamesIds) {
     if(iterator.second.id == aHandle) {
@@ -89,7 +89,7 @@ const char * const nowtech::LogStdThreadOstream::getThreadName(uint32_t const aH
   return result;
 }
 
-char const * const nowtech::LogStdThreadOstream::getCurrentThreadName() noexcept {
+char const * nowtech::LogStdThreadOstream::getCurrentThreadName() noexcept {
   char const *result;
   auto found = mTaskNamesIds.find(std::this_thread::get_id());
   if(found != mTaskNamesIds.end()) {

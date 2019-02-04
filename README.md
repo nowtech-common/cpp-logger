@@ -40,7 +40,7 @@ extern "C" void appMain() noexcept {
 }
 ```
 
-Increase using the variadic template call (in comment in the example)
+Note, this example uses the minimal interface for UART output, without the FreeRTOS multitasking support. (The example doesn't have FreeRTOS at all.) Increase using the variadic template call (in comment in the example):
 
 |Area |Inrease in debug mode |Increase in release mode (-Os)|
 |-----|---------------------:|-----------------------------:|
@@ -48,7 +48,7 @@ Increase using the variadic template call (in comment in the example)
 |data |72                    |68                            |
 |bss  |112                   |108                           |
 
-Increase using the chained call (effective in the example)
+Increase using the chained call (effective in the example):
 
 |Area |Inrease in debug mode |Increase in release mode (-Os)|
 |-----|---------------------:|-----------------------------:|

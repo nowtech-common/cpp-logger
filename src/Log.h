@@ -1,25 +1,25 @@
-/*
- * Copyright 2018 Now Technologies Zrt.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
- * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+//
+// Copyright 2018 Now Technologies Zrt.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 
 #ifndef NOWTECH_LOG_INCLUDED
 #define NOWTECH_LOG_INCLUDED
@@ -33,6 +33,12 @@
 #include <map>
 
 namespace nowtech {
+
+  namespace NumericSystem {
+    static constexpr uint8_t cBinary      =  2u;
+    static constexpr uint8_t cDecimal     = 10u;
+    static constexpr uint8_t cHexadecimal = 16u;
+  }
 
   /// Type for all logging-related sizes
   typedef uint32_t LogSizeType;
@@ -66,7 +72,7 @@ namespace nowtech {
     LogFormat& operator=(LogFormat &&) = default;
 
     bool isValid() const noexcept {
-      return base == 2u || base == 10u || base == 16u;
+      return (base == NumericSystem::cBinary || base == NumericSystem::cDecimal) || base == NumericSystem::cHexadecimal;
     }
   };
 
@@ -221,9 +227,9 @@ namespace nowtech {
   public:
     /// Has default constructor to let the stub versions work.
     LogOsInterface()
-      : mChunkSize(1)
-      , mPauseLength(1)
-      , mRefreshPeriod(1) {
+      : mChunkSize(1u)
+      , mPauseLength(1u)
+      , mRefreshPeriod(1u) {
     }
 
     /// Has default constructor to let the stub versions work.
@@ -238,7 +244,7 @@ namespace nowtech {
 
     /// Returns true if the implementation can examine whether we are in an ISR and we are in fact in an ISR.
     /// By default it returns false.
-    static bool isInterrupt() noexcept {
+    virtual bool isInterrupt() noexcept {
       return false;
     }
 
@@ -258,12 +264,12 @@ namespace nowtech {
     /// Returns a textual representation of the given thread ID.
     /// This will be OS dependent.
     /// @return the thread ID text if called from a thread.
-    virtual char const * const getThreadName(uint32_t const aHandle) noexcept = 0;
+    virtual char const * getThreadName(uint32_t const aHandle) noexcept = 0;
 
     /// Returns a textual representation of the current thread ID.
     /// This will be OS dependent.
     /// @return the thread ID text if called from a thread.
-    virtual char const * const getCurrentThreadName() noexcept = 0;
+    virtual char const * getCurrentThreadName() noexcept = 0;
 
     /// Returns a value unique among threads.
     virtual uint32_t getCurrentThreadId() noexcept = 0;
@@ -337,7 +343,7 @@ namespace nowtech {
       , mBlocks(true) {
     }
 
-    Chunk(LogOsInterface *aOsInterface, char * const aChunk, LogSizeType const aBufferLength) noexcept
+    Chunk(LogOsInterface * const aOsInterface, char * const aChunk, LogSizeType const aBufferLength) noexcept
       : mOsInterface(aOsInterface)
       , mOrigin(aChunk)
       , mChunk(aChunk)
@@ -346,7 +352,7 @@ namespace nowtech {
       , mBlocks(true) {
     }
 
-    Chunk(LogOsInterface *aOsInterface
+    Chunk(LogOsInterface * const aOsInterface
       , char * const aChunk
       , LogSizeType const aBufferLength
       , TaskIdType const aTaskId) noexcept
@@ -359,7 +365,7 @@ namespace nowtech {
       mChunk[0] = *reinterpret_cast<char const *>(&aTaskId);
     }
 
-    Chunk(LogOsInterface *aOsInterface
+    Chunk(LogOsInterface * const aOsInterface
       , char * const aChunk
       , LogSizeType const aBufferLength
       , TaskIdType const aTaskId
@@ -372,11 +378,6 @@ namespace nowtech {
       , mBlocks(aBlocks) {
       mChunk[0] = *reinterpret_cast<char const*>(&aTaskId);
     }
-
-/*Chunk(Chunk const &) = default;
-    Chunk(Chunk &&) = default;
-    Chunk& operator=(Chunk const &) = default;
-    Chunk& operator=(Chunk &&) = default;*/
 
     char * getData() const noexcept {
       return mChunk;
@@ -391,9 +392,9 @@ namespace nowtech {
     }
 
     char * const operator++() noexcept {
-      mIndex = 1;
+      mIndex = 1u;
       mChunk += mChunkSize;
-      if(mChunk == mOrigin + mBufferBytes) {
+      if(mChunk == (mOrigin + mBufferBytes)) {
         mChunk = mOrigin;
       }
       else { // nothing to do
@@ -402,37 +403,37 @@ namespace nowtech {
     }
 
     Chunk& operator=(char * const aStart) noexcept {
-      mIndex = 1;
+      mIndex = 1u;
       mChunk = const_cast<char*>(aStart);
       return *this;
     }
 
     Chunk& operator=(Chunk const &aChunk) noexcept {
-      mIndex = 1;
-      for(LogSizeType i = 0; i < mChunkSize; i++) {
+      mIndex = 1u;
+      for(LogSizeType i = 0u; i < mChunkSize; i++) {
         mChunk[i] = aChunk.mChunk[i];
       }
       return *this;
     }
 
     void invalidate() noexcept {
-      mIndex = 1;
-      mChunk[0] = cInvalidTaskId;
+      mIndex = 1u;
+      mChunk[0] = static_cast<char>(cInvalidTaskId);
     }
 
     /// defined in .cpp to allow stub.
     void push(char const mChar) noexcept;
 
     void flush() noexcept {
-      mChunk[mIndex++] = '\n';
+      mChunk[mIndex] = '\n';
       mOsInterface->push(mChunk, mBlocks);
-      mIndex = 1;
+      mIndex = 1u;
     }
 
     void pop() noexcept {
-      mIndex = 1;
+      mIndex = 1u;
       if(!mOsInterface->pop(mChunk)) {
-        mChunk[0] = cInvalidTaskId;
+        mChunk[0] = static_cast<char>(cInvalidTaskId);
       }
       else { // nothing to do
       }
@@ -445,20 +446,20 @@ namespace nowtech {
   };
 
   class LogShiftChainHelper final {
-    Log      *mLog;
-    Chunk     mAppender;
-    LogFormat mNextFormat;
+    Log * const mLog;
+    Chunk       mAppender;
+    LogFormat   mNextFormat;
 
   public:
     LogShiftChainHelper() : mLog(nullptr) {
     }
 
-    LogShiftChainHelper(Log *aLog, Chunk aAppender)
+    LogShiftChainHelper(Log * const aLog, Chunk aAppender)
     : mLog(aLog)
     , mAppender(aAppender) {
     }
 
-    LogShiftChainHelper(Log *aLog, Chunk const aAppender, LogFormat const aFormat)
+    LogShiftChainHelper(Log * const aLog, Chunk const aAppender, LogFormat const aFormat)
     : mLog(aLog)
     , mAppender(aAppender)
     , mNextFormat(aFormat) {
@@ -505,12 +506,13 @@ namespace nowtech {
   /// number of parameters.
   class Log final : public BanCopyMove {
     friend class LogShiftChainHelper;
+    static constexpr uint32_t cNameLength  =  8u;
   public:
     /// Will be used as Log << something << to << log << Log::end;
     static constexpr LogShiftChainMarker end = LogShiftChainMarker::cEnd;
 
     /// Output for unknown LogApp parameter
-    static constexpr char cUnknownApplicationName[8] = "UNKNOWN";
+    static constexpr char cUnknownApplicationName[cNameLength] = "UNKNOWN";
 
   private:
     /// The character to use instead of the thread ID if it is unknown.
@@ -522,7 +524,11 @@ namespace nowtech {
     static constexpr char cNumericError = '#';
 
     /// Zero-fill character.
-    static constexpr char cNumericFill = '0';
+    static constexpr char cNumericFill            = '0';
+    static constexpr char cNumericMarkBinary      = 'b';
+    static constexpr char cNumericMarkHexadecimal = 'x';
+    static constexpr char cMinus = '-';
+    static constexpr char cSpace = ' ';
 
     /// Separator between header fields of the log message.
     static constexpr char cSeparatorNormal = ' ';
@@ -532,7 +538,7 @@ namespace nowtech {
     static constexpr char cSeparatorFailure = '@';
 
     /// Used to convert digits to characters.
-    static constexpr char cDigit2char[16] = {
+    static constexpr char cDigit2char[NumericSystem::cHexadecimal] = {
       '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
     };
 
@@ -552,7 +558,7 @@ namespace nowtech {
 
     /// The next value of the artificial task ID. If overflows to 0, will
     /// remain there, so at most 255 tasks are allowed.
-    TaskIdType mNextTaskId = 1;
+    TaskIdType mNextTaskId = 1u;
 
     /// Map used to turn OS-specific task IDs into the artificial counterparts.
     std::map<uint32_t, TaskIdType> mTaskIds;
@@ -586,7 +592,7 @@ namespace nowtech {
     /// at most 255 tasks. All others will be handled as one.
     /// NOTE: this method locks to inhibit concurrent access of methods with the same name.
     static void registerCurrentTask() noexcept {
-      sInstance->doRegisterCurrentTask();
+      sInstance->doRegisterCurrentTask(nullptr);
     }
 
     /// Registers the current task if not already present. It can register
@@ -599,12 +605,12 @@ namespace nowtech {
 
     /// Registers the current log application
     /// at most 255 tasks. All others will be handled as one.
-    static void registerApp(LogApp aApp, char const * const aPrefix) noexcept {
+    static void registerApp(LogApp const aApp, char const * const aPrefix) noexcept {
       sInstance->mRegisteredApps[aApp] = aPrefix;
     }
 
     /// Returns true if the given app was registered.
-    static bool isRegistered(LogApp aApp) noexcept {
+    static bool isRegistered(LogApp const aApp) noexcept {
       return sInstance->mRegisteredApps.find(aApp) != sInstance->mRegisteredApps.end();
     }
 
@@ -630,7 +636,7 @@ namespace nowtech {
     LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept {
       if(mShiftChainingCallBuffers != nullptr) {
         TaskIdType taskId = getCurrentTaskId();
-        Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId);
+        Chunk appender = startSend(mShiftChainingCallBuffers + (taskId * mChunkSize), taskId);
         if(appender.isValid()) {
           append(appender, aValue);
           return LogShiftChainHelper(this, appender);
@@ -655,10 +661,10 @@ namespace nowtech {
 
     /// If aApp is registered, calls the normal send to process the arguments
     template<typename... Args>
-    static void send(LogApp aApp, Args... args) noexcept {
+    static void send(LogApp const aApp, Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId, aApp);
+        Chunk appender = sInstance->startSend(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aApp);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -692,7 +698,7 @@ namespace nowtech {
     static void send(Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSend(chunk, Chunk::cInvalidTaskId);
+        Chunk appender = sInstance->startSend(static_cast<char*>(chunk), Chunk::cInvalidTaskId);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -708,7 +714,7 @@ namespace nowtech {
     static void sendNoHeader(LogApp aApp, Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId, aApp);
+        Chunk appender = sInstance->startSendNoHeader(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aApp);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -724,7 +730,7 @@ namespace nowtech {
     static void sendNoHeader(Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSendNoHeader(chunk, Chunk::cInvalidTaskId);
+        Chunk appender = sInstance->startSendNoHeader(static_cast<char*>(chunk), Chunk::cInvalidTaskId);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -741,7 +747,6 @@ namespace nowtech {
     }
 
 private:
-    void doRegisterCurrentTask() noexcept;
     void doRegisterCurrentTask(char const * const) noexcept;
 
     /// Defined in .cpp to allow stub
@@ -756,7 +761,7 @@ private:
 
     /// Building block for variadic template based message construction.
     template<typename T>
-    void doSend(Chunk &aChunk, LogFormat& aFormat, T const aValue) noexcept {
+    void doSend(Chunk &aChunk, LogFormat const & aFormat, T const aValue) noexcept {
       append(aChunk, aFormat, aValue);
       finishSend(aChunk);
     }
@@ -770,7 +775,7 @@ private:
 
     /// Building block for variadic template based message construction.
     template<typename = LogFormat, typename T, typename... Args>
-    void doSend(Chunk &aChunk, LogFormat& aFormat, T const aValue, Args... aArgs) noexcept {
+    void doSend(Chunk &aChunk, LogFormat const & aFormat, T const aValue, Args... aArgs) noexcept {
       append(aChunk, aFormat, aValue);
       doSend(aChunk, aArgs...);
     }
@@ -780,52 +785,52 @@ private:
     Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
     Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
 
-    void append(Chunk &aChunk, LogFormat& aFormat, char const * const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, char const * const aValue) noexcept {
       append(aChunk, aValue);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, int8_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, int8_t const aValue) noexcept {
       append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, int16_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, int16_t const aValue) noexcept {
       append(aChunk, static_cast<int32_t>(aValue), static_cast<int32_t>(aFormat.base), aFormat.fill);
     }
 
-    void yappend(Chunk &aChunk, LogFormat& aFormat, int32_t const aValue) noexcept {
+    void yappend(Chunk &aChunk, LogFormat const & aFormat, int32_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<int32_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, int64_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, int64_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<int64_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, uint8_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, uint8_t const aValue) noexcept {
       append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, uint16_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, uint16_t const aValue) noexcept {
       append(aChunk, static_cast<uint32_t>(aValue), static_cast<uint32_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, uint32_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, uint32_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<uint32_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, uint64_t const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, uint64_t const aValue) noexcept {
       append(aChunk, aValue, static_cast<uint64_t>(aFormat.base), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, float const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, float const aValue) noexcept {
       append(aChunk, static_cast<double>(aValue), aFormat.fill);
     }
 
-    void append(Chunk &aChunk, LogFormat& aFormat, double const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, double const aValue) noexcept {
       append(aChunk, aValue, aFormat.fill);
     }
 
     template<typename T>
-    void append(Chunk &aChunk, LogFormat& aFormat, T const aValue) noexcept {
+    void append(Chunk &aChunk, LogFormat const & aFormat, T const aValue) noexcept {
       append(aChunk, "-=unknown=-");
     }
 
@@ -852,11 +857,14 @@ private:
     /// @param string to send
     /// @return the return value of the last append(char const ch) call.
     void append(Chunk &aChunk, char const * const aString) noexcept {
-      int i = 0;
-      if(aString != nullptr) {
-        while(aString[i] != 0) {
-          aChunk.push(aString[i++]);
+      char const * pointer = aString;
+      if(pointer != nullptr) {
+        while(*pointer != 0) {
+          aChunk.push(*pointer);
+          ++pointer;
         }
+      }
+      else { // nothing to do
       }
     }
 
@@ -940,26 +948,26 @@ private:
     void append(Chunk &aChunk, T const value, T const base, uint8_t const fill) noexcept {
       T tmpValue = value;
       uint8_t tmpFill = fill;
-      if(base != 2 && base != 10 && base != 16) {
+      if((base != NumericSystem::cBinary) && (base != NumericSystem::cDecimal) && (base != NumericSystem::cHexadecimal)) {
         aChunk.push(cNumericError);
         return;
       }
       else { // nothing to do
       }
-      if(mConfig.appendBasePrefix && base == 2) {
-        aChunk.push('0');
-        aChunk.push('b');
+      if(mConfig.appendBasePrefix && (base == NumericSystem::cBinary)) {
+        aChunk.push(cNumericFill);
+        aChunk.push(cNumericMarkBinary);
       }
       else { // nothing to do
       }
-      if(mConfig.appendBasePrefix && base == 16) {
-        aChunk.push('0');
-        aChunk.push('x');
+      if(mConfig.appendBasePrefix && (base == NumericSystem::cHexadecimal)) {
+        aChunk.push(cNumericFill);
+        aChunk.push(cNumericMarkHexadecimal);
       }
       else { // nothing to do
       }
       char tmpBuffer[mConfig.appendStackBufferLength];
-      uint8_t where = 0;
+      uint8_t where = 0u;
       bool negative = value < 0;
       do {
         T mod = tmpValue % base;
@@ -972,7 +980,7 @@ private:
         ++where;
         tmpValue /= base;
       }
-      while(tmpValue != 0 && where <= mConfig.appendStackBufferLength);
+      while((tmpValue != 0) && (where <= mConfig.appendStackBufferLength));
       if(where > mConfig.appendStackBufferLength) {
         aChunk.push(cNumericError);
         return;
@@ -980,21 +988,21 @@ private:
       else { // nothing to do
       }
       if(negative) {
-        aChunk.push('-');
+        aChunk.push(cMinus);
       }
-      else if(mConfig.alignSigned && fill > 0) {
-        aChunk.push(' ');
+      else if(mConfig.alignSigned && (fill > 0u)) {
+        aChunk.push(cSpace);
       }
       else { // nothing to do
       }
       if(tmpFill > where) {
         tmpFill -= where;
-        while(tmpFill > 0) {
+        while(tmpFill > 0u) {
           aChunk.push(cNumericFill);
           --tmpFill;
         }
       }
-      for(--where; where > 0; --where) {
+      for(--where; where > 0u; --where) {
         aChunk.push(tmpBuffer[where]);
       }
       aChunk.push(tmpBuffer[0]);
@@ -1024,3 +1032,45 @@ typedef nowtech::Log Log;
 typedef nowtech::LogConfig LC;
 
 #endif // NOWTECH_LOG_INCLUDED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

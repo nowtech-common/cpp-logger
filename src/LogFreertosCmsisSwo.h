@@ -1,25 +1,25 @@
-/*
- * Copyright 2018 Now Technologies Zrt.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
- * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+//
+// Copyright 2018 Now Technologies Zrt.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 
 #ifndef NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED
 #define NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED
@@ -94,34 +94,30 @@ namespace nowtech {
     }
 
     /// Returns true if we are in an ISR.
-    static bool isInterrupt() noexcept {
+    virtual bool isInterrupt() noexcept override {
       return stm32utils::isInterrupt();
-    }
-
-    /// Does nothing, so a call to Log::registerCurrentTask(char const * const aTaskName) won't succeed.
-    virtual void registerThreadName(char const * const) noexcept {
     }
 
     /// Returns the task name.
     /// Must not be called from ISR.
-    virtual const char * const getThreadName(uint32_t const aHandle) noexcept {
+    virtual const char * getThreadName(uint32_t const aHandle) noexcept override {
       return pcTaskGetName(reinterpret_cast<TaskHandle_t>(aHandle));
     }
 
     /// Returns the task name.
     /// Must not be called from ISR.
-    virtual const char * const getCurrentThreadName() noexcept {
+    virtual const char * getCurrentThreadName() noexcept override {
       return pcTaskGetName(nullptr);
     }
 
     /// Returns the FreeRTOS-specific thread ID.
     /// Must not be called from ISR.
-    virtual uint32_t getCurrentThreadId() noexcept {
+    virtual uint32_t getCurrentThreadId() noexcept override {
       return reinterpret_cast<uint32_t>(xTaskGetCurrentTaskHandle());
     }
 
     /// Returns the FreeRTOS tick count converted into ms.
-    virtual uint32_t getLogTime() const noexcept {
+    virtual uint32_t getLogTime() const noexcept override {
       return nowtech::OsUtil::getUptimeMillis();
     }
 
@@ -129,12 +125,12 @@ namespace nowtech {
     /// @param log the Log object to operate on.
     /// @param threadFunc the C function which serves as the task body and
     /// which will call Log.transmitterThread.
-    virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept {
+    virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept override {
       xTaskCreate(aThreadFunc, "logtransmitter", mTaskStackLength, aLog, mPriority, &mTaskHandle);
     }
 
     /// Joins the thread.
-    virtual void joinTransmitterThread() noexcept {
+    virtual void joinTransmitterThread() noexcept override {
       vTaskDelete(mTaskHandle);
     }
 
@@ -148,7 +144,7 @@ namespace nowtech {
     /// the end of the ISR. Depending on your use-case this may
     /// be acceptable or not."
     /// https://stackoverflow.com/questions/28985010/about-pxhigherprioritytaskwoken
-    virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept {
+    virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept override {
       if(stm32utils::isInterrupt()) {
         BaseType_t higherPriorityTaskWoken;
         xQueueSendFromISR(mQueue, aChunkStart, &higherPriorityTaskWoken);
@@ -163,13 +159,13 @@ namespace nowtech {
     }
 
     /// Removes the oldest chunk from the queue.
-    virtual bool pop(char * const aChunkStart) noexcept {
+    virtual bool pop(char * const aChunkStart) noexcept override {
       auto ret = xQueueReceive(mQueue, aChunkStart, pdMS_TO_TICKS(mPauseLength));
       return ret == pdTRUE ? true : false; // TODO remove
     }
 
     /// Pauses execution for the period given in the constructor.
-    virtual void pause() noexcept {
+    virtual void pause() noexcept override {
       vTaskDelay(pdMS_TO_TICKS(mPauseLength));
     }
 
@@ -177,15 +173,15 @@ namespace nowtech {
     /// @param buffer start of data
     /// @param length length of data
     /// @param aProgressFlag address of flag to be set on transmission end.
-    virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept {
-      for(LogSizeType i = 0; i < aLength; i++) {
+    virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept override {
+      for(LogSizeType i = 0u; i < aLength; i++) {
         ITM_SendChar(static_cast<uint32_t>(aBuffer[i]));
       }
       aProgressFlag->store(false);
     }
 
     /// Starts the timer after which a partially filled buffer should be sent.
-    virtual void startRefreshTimer(std::atomic<bool> *aRefreshFlag) noexcept {
+    virtual void startRefreshTimer(std::atomic<bool> *aRefreshFlag) noexcept override {
       sRefreshNeeded = aRefreshFlag;
       xTimerStart(mRefreshTimer, 0);
     }
@@ -196,16 +192,35 @@ namespace nowtech {
     }
 
     /// Calls az OS-specific lock to acquire a critical section, if implemented
-    virtual void lock() noexcept {
-      xSemaphoreTakeFromISR(mApiGuard, NULL);
+    virtual void lock() noexcept override {
+      xSemaphoreTakeFromISR(mApiGuard, nullptr);
     }
 
     /// Calls az OS-specific lock to release critical section, if implemented
-    virtual void unlock() noexcept {
-      xSemaphoreGiveFromISR(mApiGuard, NULL);
+    virtual void unlock() noexcept override {
+      xSemaphoreGiveFromISR(mApiGuard, nullptr);
     }
   };
 
 } //namespace nowtech
 
-#endif /* NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED */
+#endif // NOWTECH_LOGFREERTOSCMSISSWO_H_INCLUDED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

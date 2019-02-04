@@ -1,25 +1,25 @@
-/*
- * Copyright 2018 Now Technologies Zrt.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
- * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+//
+// Copyright 2018 Now Technologies Zrt.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 
 #ifndef NOWTECH_LOG_STD_THREAD_OSTREAM_INCLUDED
 #define NOWTECH_LOG_STD_THREAD_OSTREAM_INCLUDED
@@ -41,6 +41,7 @@ namespace nowtech {
   /// Class implementing log interface for FreeRTOS and STM HAL as STM32CubeMX
   /// provides them.
   class LogStdThreadOstream final : public LogOsInterface {
+  private:
     static constexpr uint32_t cInvalidGivenTaskId = 0u;
     static constexpr uint32_t cEnqueuePollDelay = 1u;
 
@@ -51,9 +52,7 @@ namespace nowtech {
       NameId() : id(0u) {
       }
 
-      NameId(std::string &&aName, uint32_t const aId) {
-        name = aName;
-        id = aId;
+      NameId(std::string &&aName, uint32_t const aId) : name(std::move(aName)), id(aId) {
       }
     };
 
@@ -77,7 +76,7 @@ namespace nowtech {
         , mBlockSize(aBlockSize) 
         , mBuffer(new char[aBlockCount * aBlockSize]) {
         char *ptr = mBuffer;
-        for(size_t i = 0; i < aBlockCount; ++i) {
+        for(size_t i = 0u; i < aBlockCount; ++i) {
           mFreeList.bounded_push(ptr);
           ptr += aBlockSize;
         }
@@ -141,6 +140,8 @@ namespace nowtech {
     /// defined here because OS-specific functionality is here.
     std::atomic<bool> *mRefreshNeeded;
 
+    /// We use std::recursive_mutex here (banned by HIC++4), because the OsInterface API
+    /// was designed for FreeRTOS, and we currently have no resource to redesign it.
     std::recursive_mutex         mApiMutex;
 
   public:
@@ -166,53 +167,53 @@ namespace nowtech {
     /// This function MUST NOT be called from user code.
     /// void Log::registerCurrentTask(char const * const aTaskName) may call it only.
     /// @param aTaskName Task name to register.
-    virtual void registerThreadName(char const * const aTaskName) noexcept {
-      NameId nameId { std::string(aTaskName), mNextGivenTaskId };
+    virtual void registerThreadName(char const * const aTaskName) noexcept override {
+      NameId item { std::string(aTaskName), mNextGivenTaskId };
       ++mNextGivenTaskId;
-      mTaskNamesIds.insert(std::pair<std::thread::id, NameId>(std::this_thread::get_id(), nameId));
+      mTaskNamesIds.insert(std::pair<std::thread::id, NameId>(std::this_thread::get_id(), item));
     }
 
     /// Returns the task name. This is a dummy and inefficient implementation,
     /// but normally runs only once during registering the current thread.
     /// Note, the returned pointer is valid only as long as this object lives.
-    virtual char const * const getThreadName(uint32_t const aHandle) noexcept;
+    virtual char const * getThreadName(uint32_t const aHandle) noexcept override;
 
     /// Returns the current task name.
-    virtual char const * const getCurrentThreadName() noexcept;
+    virtual char const * getCurrentThreadName() noexcept override;
 
     /// Returns an artificial thread ID for registered threads, cInvalidGivenTaskId otherwise;
-    virtual uint32_t getCurrentThreadId() noexcept;
+    virtual uint32_t getCurrentThreadId() noexcept override;
 
     /// Returns the std::chrono::steady_clock tick count converted into ms and truncated to 32 bits.
-    virtual uint32_t getLogTime() const noexcept {
-      return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    virtual uint32_t getLogTime() const noexcept override {
+      return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     }
 
     /// Creates the transmitter thread using the name logtransmitter.
     /// @param log the Log object to operate on.
     /// @param threadFunc the C function which serves as the task body and
     /// which will call Log.transmitterThread.
-    virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept {
+    virtual void createTransmitterThread(Log *aLog, void(* aThreadFunc)(void *)) noexcept override {
       mTransmitterThread = new std::thread([aLog, aThreadFunc]{aThreadFunc(aLog);});
     }
     
     /// Joins the thread.
-    virtual void joinTransmitterThread() noexcept {
+    virtual void joinTransmitterThread() noexcept override {
       mTransmitterThread->join();
     };
 
     /// Enqueues the chunks, possibly blocking if the queue is full.
-    virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept {
+    virtual void push(char const * const aChunkStart, bool const aBlocks) noexcept override {
       mQueue.send(aChunkStart, aBlocks);
     }
 
     /// Removes the oldest chunk from the queue.
-    virtual bool pop(char * const aChunkStart) noexcept {
+    virtual bool pop(char * const aChunkStart) noexcept override {
       return mQueue.receive(aChunkStart, mPauseLength);
     }
 
     /// Pauses execution for the period given in the constructor.
-    virtual void pause() noexcept {
+    virtual void pause() noexcept override {
       std::this_thread::sleep_for(std::chrono::milliseconds(mPauseLength));
     }
 
@@ -220,13 +221,13 @@ namespace nowtech {
     /// @param buffer start of data
     /// @param length length of data
     /// @param aProgressFlag address of flag to be set on transmission end.
-    virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept {
+    virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept override {
       mOutput.write(aBuffer, aLength);
       aProgressFlag->store(false);
     }
 
     /// Starts the timer after which a partially filled buffer should be sent.
-    virtual void startRefreshTimer(std::atomic<bool> *aRefreshFlag) noexcept {
+    virtual void startRefreshTimer(std::atomic<bool> *aRefreshFlag) noexcept override {
       mRefreshNeeded = aRefreshFlag;
       mRefreshTimer.start();
     }
@@ -238,12 +239,12 @@ namespace nowtech {
     }
 
     /// Calls az OS-specific lock to acquire a critical section, if implemented
-    virtual void lock() noexcept {
+    virtual void lock() noexcept override {
       mApiMutex.lock();
     }
 
     /// Calls az OS-specific lock to release critical section, if implemented
-    virtual void unlock() noexcept {
+    virtual void unlock() noexcept override {
       mApiMutex.unlock();
     }
   };
@@ -251,3 +252,15 @@ namespace nowtech {
 } //namespace nowtech
 
 #endif // NOWTECH_LOG_FREERTOS_STMHAL_INCLUDED
+
+
+
+
+
+
+
+
+
+
+
+

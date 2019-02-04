@@ -1,25 +1,25 @@
-/*
- * Copyright 2018 Now Technologies Zrt.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
- * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+//
+// Copyright 2018 Now Technologies Zrt.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 
 #include "LogStdThreadOstream.h"
 
@@ -77,7 +77,7 @@ void nowtech::LogStdThreadOstream::FreeRtosTimer::run() noexcept {
   }
 }
 
-const char * const nowtech::LogStdThreadOstream::getThreadName(uint32_t const aHandle) noexcept {
+const char * nowtech::LogStdThreadOstream::getThreadName(uint32_t const aHandle) noexcept {
   char const * result = "";
   for(auto const &iterator : mTaskNamesIds) {
     if(iterator.second.id == aHandle) {
@@ -89,7 +89,7 @@ const char * const nowtech::LogStdThreadOstream::getThreadName(uint32_t const aH
   return result;
 }
 
-char const * const nowtech::LogStdThreadOstream::getCurrentThreadName() noexcept {
+char const * nowtech::LogStdThreadOstream::getCurrentThreadName() noexcept {
   char const *result;
   auto found = mTaskNamesIds.find(std::this_thread::get_id());
   if(found != mTaskNamesIds.end()) {
@@ -112,3 +112,4 @@ uint32_t nowtech::LogStdThreadOstream::getCurrentThreadId() noexcept {
   }
   return result;
 }
+

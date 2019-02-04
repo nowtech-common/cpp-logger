@@ -37,7 +37,8 @@ extern "C" void appMain() noexcept {
       Log::n() << LC::cX8 << result << Log::end;
     }
   }
-}```
+}
+```
 
 Increase using the variadic template call (in comment in the example)
 

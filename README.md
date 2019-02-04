@@ -20,6 +20,41 @@ The library is published under the [MIT license](https://opensource.org/licenses
 
 Copyright 2018 Now Technologies Zrt.
 
+## Resource consumption
+
+The library was designed to allow the programmer control log bandwidth usage, program and data memory consumption with minimal relying on external libraries. It does not depend for example on the `printf` function family. Enabling logging in this example program has the following memory usages on STM32F2xx using g++ 5.4.1:
+
+```cpp
+extern "C" void appMain() noexcept {
+  static nowtech::LogConfig config;
+  static nowtech::LogStmHal osInterface(&huart2, config, 100);
+  static Log log(osInterface, config);
+  Log::registerCurrentTask();
+  for(;;) {
+    uint32_t result;
+    if(HAL_RNG_GenerateRandomNumber(&hrng, &result) == HAL_OK) {
+      //Log::sendNoHeader(LC::cX8, result);
+      Log::n() << LC::cX8 << result << Log::end;
+    }
+  }
+}```
+
+Increase using the variadic template call (in comment in the example)
+
+|Area |Inrease in debug mode |Increase in release mode (-Os)|
+|-----|---------------------:|-----------------------------:|
+|prg  |14784                 |4460                          |
+|data |72                    |68                            |
+|bss  |112                   |108                           |
+
+Increase using the chained call (effective in the example)
+
+|Area |Inrease in debug mode |Increase in release mode (-Os)|
+|-----|---------------------:|-----------------------------:|
+|prg  |15164                 |4628                          |
+|data |72                    |68                            |
+|bss  |112                   |108                           |
+
 ## API
 
 The library is divided into two classes:

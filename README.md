@@ -58,7 +58,7 @@ Increase using the chained call (effective in the example):
 
 ## Log example
 
-This is a FreeRTOS multithreaded log example with and without header info (task name, uptime in ms, log topic).
+This is a FreeRTOS multithreaded log example with and without header info (task name, uptime in ms, log topic). The header components can individually be switched on and off.
 
 ```defaultThread 0000001 SYSTEM       Reset cause: brown out
 defaultThread 0000001 PERSISTENCE  Calculated persistence length: 89

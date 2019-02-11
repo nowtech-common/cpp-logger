@@ -56,6 +56,26 @@ Increase using the chained call (effective in the example):
 |data |72                    |68                            |
 |bss  |112                   |108                           |
 
+## Log example
+
+This is a FreeRTOS multithreaded log example with and without header info (task name, uptime in ms, log topic).
+
+```defaultThread 0000001 SYSTEM       Reset cause: brown out
+defaultThread 0000001 PERSISTENCE  Calculated persistence length: 89
+watchdogThrd. 0000006 WATCHDOG     Registered [0]: black box    
+defaultThread 0000117 BLACKBOX     start: 180 capac: 223 low: 44 intact: 89
+defaultThread 0000278 BLACKBOX     expecting 223 records.
+defaultThread 0000279 BLACKBOX     read 223 valid records.
+0 0. rec: 0 RstSrcOpTimeIv 2245m, reset: 01000110, invalid: false
+defaultThread 0000279 PERSISTENCE  readValues: copy 0
+defaultThread 0000288 PERSISTENCE  readValues: copy 0: no mismatch
+defaultThread 0000288 BLACKBOX     start: 180 capac: 223 low: 44 intact: 89
+defaultThread 0000297 BLACKBOX     last session:
+46 226. rec: 0 RstSrcOpTimeIv 4424m, reset: 00001010, invalid: false
+44 227. rec: 0 PanBldRelCharg PAN: 307, build: 1040, release: true charge: true
+43 228. rec: 3 ServModeEnter  164850ms, arg: 0
+```
+
 ## API
 
 The library is divided into two classes:

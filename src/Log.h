@@ -24,6 +24,7 @@
 #ifndef NOWTECH_LOG_INCLUDED
 #define NOWTECH_LOG_INCLUDED
 
+#include "LogApp.h"
 #include "BanCopyMove.h"
 #include <cstdint>
 #include <type_traits>
@@ -76,16 +77,15 @@ namespace nowtech {
     }
   };
 
-  /// Type of application subsystem to log. These needs to be registered
-  /// if the log is invoked like Log::send(nowtech::LogApp::cSystem, "stuff to log")
-  /// If registration is omitted, the above call will do nothing.
-  /// Regural calls like Log::send("stuff to log") will always have effect.
-  /// User code must not use the cInvalid value.
-  enum class LogApp : uint8_t {
-    cInvalid,
-    cSystem,
-    cWatchdog
-  };
+  // Should come in user-defined LogApp.h in namespace nowtech:
+  // Type of application subsystem to log. These needs to be registered
+  // if the log is invoked like Log::send(nowtech::LogApp::cSystem, "stuff to log")
+  // If registration is omitted, the above call will do nothing.
+  // Regural calls like Log::send("stuff to log") will always have effect.
+  // User code must not use the cInvalid value.
+  // enum class LogApp : uint8_t {
+  //  cInvalid
+  // }
 
   /// Configuration struct with default values for general usage.
   struct LogConfig final : public BanCopyMove {

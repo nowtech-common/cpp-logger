@@ -90,7 +90,29 @@ serialization and number conversion itself. It uses a heap-allocated
 buffers and requires logging threads to register themselves. To ensure
 there is enough memory for all application functions, object
 construction and thread registration should be done as early as
-possible.  
+possible.
+
+There is an application-specific enum `nowtech::LogApp` which comes in a user-defined header called _LogApp.h_. This may have the following contents:
+
+```cpp
+#ifndef NOWTECH_LOGAPP_H_INCLUDED
+#define NOWTECH_LOGAPP_H_INCLUDED
+
+#include <cstdint>
+
+namespace nowtech {
+
+  enum class LogApp : uint8_t {
+    cInvalid, // compulsory value
+    cSystem,
+    cReceive,
+    cTransmit,
+    cError
+  };
+
+}
+
+#endif /* NOWTECH_LOGAPP_H_INCLUDED */```
 
 ### The class operates roughly as follows:
 
@@ -130,7 +152,7 @@ The following steps are required to initialize the log system:
 3.  Create the Log instance using the above two objects. This instance should not be destructed.
 4.  Register the required topics or application areas to let only a
     subset of logs be printed using `Log::registerApp`. These are enum
-    values, and can be defined in `nowtech::LogApp`. For example, if
+    values, and can be defined in `nowtech::LogApp` in the application-specific file _LogApp.h_ For example, if
     you have there `System`, `Connection` and `Watchdog` defined, and
     you only register `Connection` and `Watchdog`, all the calls
     starting with `Log::send(nowtech::LogApp::cSystem` will be

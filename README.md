@@ -92,7 +92,7 @@ there is enough memory for all application functions, object
 construction and thread registration should be done as early as
 possible.
 
-There is an application-specific enum `nowtech::LogApp` which comes in a user-defined header called _LogApp.h_. This may have the following contents:
+There is an application-specific enum `nowtech::LogApp` which comes in a user-defined header called _LogApp.h_. This may have similar contents:
 
 ```cpp
 #ifndef NOWTECH_LOGAPP_H_INCLUDED
@@ -102,7 +102,7 @@ There is an application-specific enum `nowtech::LogApp` which comes in a user-de
 
 namespace nowtech {
 
-  enum class LogApp : uint8_t {
+  enum class LogApp : uint8_t { // this type is strongly recommended
     cInvalid, // compulsory value
     cSystem,
     cReceive,
@@ -112,7 +112,8 @@ namespace nowtech {
 
 }
 
-#endif /* NOWTECH_LOGAPP_H_INCLUDED */```
+#endif /* NOWTECH_LOGAPP_H_INCLUDED */
+```
 
 ### The class operates roughly as follows:
 

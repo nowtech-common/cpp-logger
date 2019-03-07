@@ -103,7 +103,7 @@ namespace nowtech {
     }
 
     /// Returns true if we are in an ISR.
-    static bool isInterrupt() noexcept {
+    virtual bool isInterrupt() noexcept override {
       return stm32utils::isInterrupt();
     }
 

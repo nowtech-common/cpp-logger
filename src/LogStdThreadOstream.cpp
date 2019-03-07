@@ -60,19 +60,13 @@ bool nowtech::LogStdThreadOstream::FreeRtosQueue::receive(char * const aChunkSta
   return result;
 }
 
-
 void nowtech::LogStdThreadOstream::FreeRtosTimer::run() noexcept {
   while(mKeepRunning.load()) {
-    if(mAlarmed) {
-      if(mConditionVariable.wait_for(mLock, std::chrono::milliseconds(mTimeout)) == std::cv_status::timeout) {
-        mLambda();
-        mAlarmed.store(false);
-      }  
-      else { // nothing to do
-      }
+    if(mConditionVariable.wait_for(mLock, std::chrono::milliseconds(mTimeout)) == std::cv_status::timeout && mAlarmed.load()) {
+      mLambda();
+      mAlarmed.store(false);
     }
     else {
-      mConditionVariable.wait(mLock);
     }
   }
 }

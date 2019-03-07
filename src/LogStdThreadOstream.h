@@ -223,6 +223,7 @@ namespace nowtech {
     /// @param aProgressFlag address of flag to be set on transmission end.
     virtual void transmit(const char * const aBuffer, LogSizeType const aLength, std::atomic<bool> *aProgressFlag) noexcept override {
       mOutput.write(aBuffer, aLength);
+      mOutput.flush();
       aProgressFlag->store(false);
     }
 
@@ -235,7 +236,6 @@ namespace nowtech {
     /// Sets the flag.
     void refreshNeeded() noexcept {
       mRefreshNeeded->store(true);
-      mOutput.flush();
     }
 
     /// Calls az OS-specific lock to acquire a critical section, if implemented

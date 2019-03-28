@@ -57,21 +57,23 @@ namespace nowtech {
     virtual ~LogStmHal() {
     }
 
-    /// Returns true if we are in an ISR.
-    virtual bool isInterrupt() noexcept override {
-      return stm32utils::isInterrupt();
+    /// Returns a textual representation of the current thread ID.
+    /// This will be OS dependent.
+    /// @return the thread ID text if called from a thread.
+    virtual char const * getCurrentThreadName() noexcept {
+      return "";
     }
 
     /// Returns a textual representation of the given thread ID.
     /// @return nullptr.
-    virtual char const * const getThreadName(uint32_t const aHandle) noexcept {
+    virtual char const * getThreadName(uint32_t const aHandle) noexcept {
       return nullptr;
     };
 
     /// @return nullptr.
-    virtual const char * const getCurrentThreadName() noexcept {
+   /* virtual const char * const getCurrentThreadName() noexcept {
       return nullptr;
-    }
+    }*/
 
     /// Returns 0.
     virtual uint32_t getCurrentThreadId() noexcept {

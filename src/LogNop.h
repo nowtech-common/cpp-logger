@@ -41,16 +41,14 @@ public:
   virtual ~LogNop() {
   }
 
-  /// Returns a textual representation of the given thread ID.
   /// @return nullptr.
-  virtual char const * const getThreadName(uint32_t const aHandle) noexcept {
+  virtual char const * getCurrentThreadName() noexcept {
+    return "";
+  }
+
+  virtual char const *getThreadName(uint32_t const aHandle) noexcept {
     return nullptr;
   };
-
-  /// @return nullptr.
-  virtual const char * const getCurrentThreadName() noexcept {
-    return nullptr;
-  }
 
   /// Returns 0.
   virtual uint32_t getCurrentThreadId() noexcept {

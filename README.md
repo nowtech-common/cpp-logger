@@ -333,7 +333,8 @@ logstmhal.h            |An STM HAL UART device|yes         |An interface for STM
 logfreertosstmhal.h    |An STM HAL UART device|yes         |An interface for STM HAL under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
 logcmsisswo.h          |CMSIS SWO       |not yet           |An interface for CMSIS SWO making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
 logfreertoscmsisswo.h  |CMSIS SWO       |not yet           |An interface for CMSIS SWO under FreeRTOS, tested with version 9.0.0. This implementaiton is designed to put as little load on the actual thread as possible. It makes use of the built-in buffering and transmits from its own thread.
-logstdthreadostream.h  |std::ostream    |not yet           |An interface using STL (even for threads) and boost::lockfree::queue. Thanks to this class, this implementation is lock-free. Note, this class does not own the std::ostream and does nothing but writes to it. Opening, closing etc is responsibility of the user code. The stream should NOT throw exceptions. Note, as this interface does not know interrupts, skipping a thread registration will prevent logging from that thread. Note, this class **requires Boost** to compile.
+logstdostream.h        |std::ostream    |not yet           |An interface for std::ostream making immediate transmits from the actual thread. This comes without any buffering or concurrency support, so messages from different threads may interleave each other.
+logstdthreadostream.h  |std::ostream    |yes               |An interface using STL (even for threads) and boost::lockfree::queue. Thanks to this class, this implementation is lock-free. Note, this class does not own the std::ostream and does nothing but writes to it. Opening, closing etc is responsibility of the user code. The stream should NOT throw exceptions. Note, as this interface does not know interrupts, skipping a thread registration will prevent logging from that thread. Note, this class **requires Boost** to compile.
 
 ## Compiling
 
@@ -356,10 +357,12 @@ One of these headers, and if present the related .cpp is also needed:
   - logcmsisswo.h
   - logfreertoscmsisswo.h
   - logfreertoscmsisswo.cpp
+  - logstdostream.h
   - logstdthreadostream.h
   - logstdthreadostream.cpp
 
 _**Missing** files are_:
+  - logapp.h   - application-specific.
   - stm32hal.h - this is a placeholder for a set of includes like `stm32f215xx.h`, `stm32f2xx_hal.h`, `stm32f2xx_ll_utils.h` for a given MCU.
   - stm32utils.h which should contain a function for interrupt testing, like
 

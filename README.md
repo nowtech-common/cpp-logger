@@ -113,8 +113,6 @@ extern LogTopicInstance selfTest;
 #endif /* SOMELOGTOPICS_H_INCLUDED */
 ```
 
-SomeLogTopicNamespace
-
 While the .cpp file
 
 ```cpp

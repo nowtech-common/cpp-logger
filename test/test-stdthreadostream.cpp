@@ -43,12 +43,18 @@ char names[10][10] = {
   "thread_9"
 };
 
+namespace nowtech {
+namespace LogTopics {
+LogTopicInstance system;
+}
+}
+ 
 void delayedLog(int32_t n) {
   Log::registerCurrentTask(names[n]);
-  Log::send(nowtech::LogApp::cSystem, n, ": ", 0);
+  Log::send(*nowtech::LogTopics::system, n, ": ", 0);
   for(int64_t i = 1; i < 13; ++i) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1 << i));
-    Log::i(nowtech::LogApp::cSystem) << n << ". thread delay logarithm: " << LC::cX1 << i << Log::end;
+    Log::i(nowtech::LogTopics::system) << n << ". thread delay logarithm: " << LC::cX1 << i << Log::end;
   }
 }
  
@@ -62,20 +68,20 @@ int main() {
   logConfig.allowVariadicTemplatesWork = false;
   nowtech::LogStdThreadOstream osInterface(std::cout, logConfig);
   nowtech::Log log(osInterface, logConfig);
-  Log::registerApp(nowtech::LogApp::cSystem, "system");
+  Log::registerTopic(nowtech::LogTopics::system, "system");
 
   uint64_t const uint64 = 123456789012345;
   int64_t const int64 = -123456789012345;
 
   Log::registerCurrentTask("main");
 
-  Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
-  Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+  Log::send(*nowtech::LogTopics::system, "uint64: ", uint64, " int64: ", int64);
+  Log::sendNoHeader(*nowtech::LogTopics::system, "uint64: ", uint64, " int64: ", int64);
   Log::send("uint64: ", uint64, " int64: ", int64);
   Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
   
-  Log::i(nowtech::LogApp::cSystem) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
-  Log::n(nowtech::LogApp::cSystem) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
+  Log::i(nowtech::LogTopics::system) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
+  Log::n(nowtech::LogTopics::system) << "uint64: " << uint64 << " int64: " << int64 << Log::end;
   Log::i() << "uint64: " << uint64 << " int64: " << int64 << Log::end;
   Log::n() << "uint64: " << uint64 << " int64: " << int64 << Log::end;
 
@@ -83,8 +89,8 @@ int main() {
   int8_t const int8 = -42;
 
   try {
-    Log::i(nowtech::LogApp::cSystem) << uint8 << ' ' << int8 << Log::end;
-    Log::i(nowtech::LogApp::cSystem) << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
+    Log::i(nowtech::LogTopics::system) << uint8 << ' ' << int8 << Log::end;
+    Log::i(nowtech::LogTopics::system) << LC::cX2 << uint8 << ' ' << LC::cD3 << int8 << Log::end;
     Log::i() << uint8 << ' ' << int8 << Log::end;
     Log::i() << LC::cX2 << uint8 << int8 << Log::end;
     Log::i() << Log::end;

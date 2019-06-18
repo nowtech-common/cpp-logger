@@ -64,6 +64,7 @@ constexpr nowtech::LogFormat nowtech::LogConfig::cX8;
 constexpr char nowtech::Log::cUnknownApplicationName[cNameLength];
 constexpr char nowtech::Log::cDigit2char[nowtech::NumericSystem::cHexadecimal];
 
+std::atomic<nowtech::LogTopicType> nowtech::Log::sNextFreeTopic;
 nowtech::Log *nowtech::Log::sInstance;
 
 nowtech::LogShiftChainHelper& nowtech::LogShiftChainHelper::operator<<(LogShiftChainMarker const) noexcept {
@@ -80,6 +81,7 @@ nowtech::Log::Log(LogOsInterface &aOsInterface, LogConfig const &aConfig) noexce
   , mConfig(aConfig)
   , mChunkSize(aConfig.chunkSize) {
   sInstance = this;
+  sNextFreeTopic.store(cFirstFreeTopic);
   mKeepRunning.store(true);
   mOsInterface.createTransmitterThread(this, logTransmitterThreadFunction);
   if(aConfig.allowShiftChainingCalls) {
@@ -208,10 +210,10 @@ nowtech::LogShiftChainHelper nowtech::Log::i() noexcept {
   }
 }
 
-nowtech::LogShiftChainHelper Log::i(LogApp const aApp) noexcept {
+nowtech::LogShiftChainHelper Log::i(LogTopicType const aTopic) noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aApp);
+    nowtech::Chunk appender = sInstance->startSend(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aTopic);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -240,10 +242,10 @@ nowtech::LogShiftChainHelper Log::n() noexcept {
   }
 }
 
-nowtech::LogShiftChainHelper Log::n(LogApp const aApp) noexcept {
+nowtech::LogShiftChainHelper Log::n(LogTopicType const aTopic) noexcept {
   if(sInstance->mShiftChainingCallBuffers != nullptr) {
     nowtech::TaskIdType taskId = sInstance->getCurrentTaskId();
-    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aApp);
+    nowtech::Chunk appender = sInstance->startSendNoHeader(sInstance->mShiftChainingCallBuffers + (taskId * sInstance->mChunkSize), taskId, aTopic);
     if(appender.isValid()) {
       return nowtech::LogShiftChainHelper(sInstance, appender);
     }
@@ -256,10 +258,10 @@ nowtech::LogShiftChainHelper Log::n(LogApp const aApp) noexcept {
   }
 }
 
-nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogApp const aApp) noexcept {
+nowtech::LogShiftChainHelper nowtech::Log::operator<<(LogTopicType const aTopic) noexcept {
   if(mShiftChainingCallBuffers != nullptr) {
     TaskIdType taskId = getCurrentTaskId();
-    Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId, aApp);
+    Chunk appender = startSend(mShiftChainingCallBuffers + taskId * mChunkSize, taskId, aTopic);
     if(appender.isValid()) {
       return LogShiftChainHelper(this, appender);
     }
@@ -333,9 +335,9 @@ nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType con
   return appender;
 }
 
-nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp const aApp) noexcept {
-  auto found = mRegisteredApps.find(aApp);
-  if(found != mRegisteredApps.end()) {
+nowtech::Chunk nowtech::Log::startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogTopicType const aTopic) noexcept {
+  auto found = mRegisteredTopics.find(aTopic);
+  if(found != mRegisteredTopics.end()) {
     nowtech::Chunk appender = startSend(aChunkBuffer, aTaskId);
     if(appender.isValid()) {
       append(appender, found->second);
@@ -360,8 +362,8 @@ nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskId
   }
 }
 
-nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp const aApp) noexcept {
-  if(mRegisteredApps.find(aApp) != mRegisteredApps.end()) {
+nowtech::Chunk nowtech::Log::startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogTopicType const aTopic) noexcept {
+  if(mRegisteredTopics.find(aTopic) != mRegisteredTopics.end()) {
     return startSendNoHeader(aChunkBuffer, aTaskId);
   }
   else {

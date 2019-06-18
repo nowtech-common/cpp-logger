@@ -24,7 +24,6 @@
 #ifndef NOWTECH_LOG_INCLUDED
 #define NOWTECH_LOG_INCLUDED
 
-#include "LogApp.h"
 #include "BanCopyMove.h"
 #include <cstdint>
 #include <type_traits>
@@ -46,6 +45,32 @@ namespace nowtech {
 
   /// Type for task ID in map.
   typedef uint8_t TaskIdType;
+
+  typedef uint8_t LogTopicType;
+
+  class Log;
+
+  class LogTopicInstance final {
+    friend class Log;
+  public:
+    static constexpr LogTopicType cInvalidTopic = 0u;
+  private:
+    LogTopicType mValue = cInvalidTopic;
+
+    LogTopicType operator=(LogTopicType const aValue) {
+      mValue = aValue;
+      return aValue;
+    }
+  
+  public:
+    LogTopicType operator*() {
+      return mValue;
+    }
+
+    operator LogTopicType() {
+      return mValue;
+    }
+  };
 
   /// Struct holding numeric system and zero fill information.
   struct LogFormat {
@@ -76,16 +101,6 @@ namespace nowtech {
       return (base == NumericSystem::cBinary || base == NumericSystem::cDecimal) || base == NumericSystem::cHexadecimal;
     }
   };
-
-  // Should come in user-defined LogApp.h in namespace nowtech:
-  // Type of application subsystem to log. These needs to be registered
-  // if the log is invoked like Log::send(nowtech::LogApp::cSystem, "stuff to log")
-  // If registration is omitted, the above call will do nothing.
-  // Regural calls like Log::send("stuff to log") will always have effect.
-  // User code must not use the cInvalid value.
-  // enum class LogApp : uint8_t {
-  //  cInvalid
-  // }
 
   /// Configuration struct with default values for general usage.
   struct LogConfig final : public BanCopyMove {
@@ -204,8 +219,6 @@ namespace nowtech {
 
     LogConfig() noexcept = default;
   };
-
-  class Log;
 
   /// Abstract base class for OS/architecture/dependent log functionality under
   /// the Log class. The instance directly referenced by the Log object will
@@ -511,10 +524,13 @@ namespace nowtech {
     /// Will be used as Log << something << to << log << Log::end;
     static constexpr LogShiftChainMarker end = LogShiftChainMarker::cEnd;
 
-    /// Output for unknown LogApp parameter
+    /// Output for unknown LogTopicType parameter
     static constexpr char cUnknownApplicationName[cNameLength] = "UNKNOWN";
 
   private:
+    static constexpr LogTopicType cFreeTopicIncrement = 1u;
+    static constexpr LogTopicType cFirstFreeTopic = LogTopicInstance::cInvalidTopic + cFreeTopicIncrement;
+
     /// The character to use instead of the thread ID if it is unknown.
     static constexpr char cIsrTaskName = '?';
 
@@ -560,11 +576,13 @@ namespace nowtech {
     /// remain there, so at most 255 tasks are allowed.
     TaskIdType mNextTaskId = 1u;
 
+    static std::atomic<LogTopicType> sNextFreeTopic;
+
     /// Map used to turn OS-specific task IDs into the artificial counterparts.
     std::map<uint32_t, TaskIdType> mTaskIds;
 
-    /// Registry to check calls like Log::send(nowtech::LogApp::cSystem, "stuff to log")
-    std::map<LogApp, char const *> mRegisteredApps;
+    /// Registry to check calls like Log::send(nowtech::LogTopicType::cSystem, "stuff to log")
+    std::map<LogTopicType, char const *> mRegisteredTopics;
 
     /// Used for Chunk buffers during shift chain-type calls.
     char *mShiftChainingCallBuffers = nullptr;
@@ -605,13 +623,14 @@ namespace nowtech {
 
     /// Registers the current log application
     /// at most 255 tasks. All others will be handled as one.
-    static void registerApp(LogApp const aApp, char const * const aPrefix) noexcept {
-      sInstance->mRegisteredApps[aApp] = aPrefix;
+    static void registerTopic(LogTopicInstance &aTopic, char const * const aPrefix) noexcept {
+      aTopic = sNextFreeTopic.fetch_add(cFreeTopicIncrement);
+      sInstance->mRegisteredTopics[aTopic] = aPrefix;
     }
 
     /// Returns true if the given app was registered.
-    static bool isRegistered(LogApp const aApp) noexcept {
-      return sInstance->mRegisteredApps.find(aApp) != sInstance->mRegisteredApps.end();
+    static bool isRegistered(LogTopicType const aTopic) noexcept {
+      return sInstance->mRegisteredTopics.find(aTopic) != sInstance->mRegisteredTopics.end();
     }
 
     /// Transmitter thread implementation.
@@ -623,13 +642,13 @@ namespace nowtech {
     static LogShiftChainHelper i() noexcept;
 
     /// Starts a << operator chain with the specified app
-    static LogShiftChainHelper i(LogApp const aApp) noexcept;
+    static LogShiftChainHelper i(LogTopicType const aTopic) noexcept;
 
     /// Starts a << operator chain with no argument, without printing header.
     static LogShiftChainHelper n() noexcept;
 
     /// Starts a << operator chain with the specified app, without printing header.
-    static LogShiftChainHelper n(LogApp const aApp) noexcept;
+    static LogShiftChainHelper n(LogTopicType const aTopic) noexcept;
 
     /// Starts a << operator chain with the specified argument.
     template<typename ArgumentType>
@@ -650,8 +669,8 @@ namespace nowtech {
       }
     }
 
-    /// Starts a << operator chain with the specified LogApp
-    LogShiftChainHelper operator<<(LogApp const aApp) noexcept;
+    /// Starts a << operator chain with the specified LogTopicType
+    LogShiftChainHelper operator<<(LogTopicType const aTopic) noexcept;
 
     /// Starts a << operator chain with the specified format to be used by the next argument
     LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;
@@ -659,12 +678,12 @@ namespace nowtech {
     /// Finishes the << operator chain just started
     LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;
 
-    /// If aApp is registered, calls the normal send to process the arguments
+    /// If aTopic is registered, calls the normal send to process the arguments
     template<typename... Args>
-    static void send(LogApp const aApp, Args... args) noexcept {
+    static void send(LogTopicType const aTopic, Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSend(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aApp);
+        Chunk appender = sInstance->startSend(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aTopic);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -711,10 +730,10 @@ namespace nowtech {
 
     /// Similar to send but does not emit any preconfigured header.
     template<typename... Args>
-    static void sendNoHeader(LogApp aApp, Args... args) noexcept {
+    static void sendNoHeader(LogTopicType aTopic, Args... args) noexcept {
       if(sInstance->mConfig.allowVariadicTemplatesWork) {
         char chunk[sInstance->mChunkSize];
-        Chunk appender = sInstance->startSendNoHeader(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aApp);
+        Chunk appender = sInstance->startSendNoHeader(static_cast<char*>(chunk), Chunk::cInvalidTaskId, aTopic);
         if(appender.isValid()) {
           sInstance->doSend(appender, args...);
         }
@@ -781,9 +800,9 @@ private:
     }
 
     Chunk startSend(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
-    Chunk startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
+    Chunk startSend(char * const aChunkBuffer, TaskIdType const aTaskId, LogTopicType aTopic) noexcept;
     Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId) noexcept;
-    Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogApp aApp) noexcept;
+    Chunk startSendNoHeader(char * const aChunkBuffer, TaskIdType const aTaskId, LogTopicType aTopic) noexcept;
 
     void append(Chunk &aChunk, LogFormat const & aFormat, char const * const aValue) noexcept {
       append(aChunk, aValue);

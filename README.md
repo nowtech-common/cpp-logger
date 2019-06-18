@@ -10,7 +10,7 @@ There are two log call flavours:
   - The `std::ostream`-like solution, which uses minimal stack. Discarding headers is interesting only if there are many simple homogeneous calls, or the available bandwidth is limited.
 
 The library reserves some buffers and a queue during construction, and makes
-small heap allocations during thread / log app registrations. After it, no heap
+small heap allocations during thread / log topic registrations. After it, no heap
 modification occurs, so it will be safe to use from embedded code.
 
 The code was written to possibly conform MISRA C++ and High-Integrity
@@ -83,7 +83,7 @@ The library is divided into two classes:
   - `nowtech::Log` for high-level API and template logic.
   - `nowtech::LogOsInterface` and subclasses for OS or library-dependent layer.
 
-The nowtech::Log class provides a high-level template based interface for logging characters, C-style
+The `nowtech::Log` class provides a high-level template based interface for logging characters, C-style
 strings, signed and unsigned integers and floating point types. This
 class was designed to use with 32 bit MCUs with small memory, performs
 serialization and number conversion itself. It uses a heap-allocated
@@ -92,28 +92,39 @@ there is enough memory for all application functions, object
 construction and thread registration should be done as early as
 possible.
 
-There is an application-specific enum `nowtech::LogApp` which comes in a user-defined header called _LogApp.h_. This may have similar contents:
+Log topic values of type `nowtech::LogTopicInstance` (one for each registered topic) are intended to be stored in some global accessible construct for convenient use. Of course, local storage and passing values around is also possible. The registration mechanism allows libraries to define their own topic variable set and be compiled on its own into a static/dynamic library. Only the registration is required to be performed in the initialization part of the application. An appropriate header file would look like
 
 ```cpp
-#ifndef NOWTECH_LOGAPP_H_INCLUDED
-#define NOWTECH_LOGAPP_H_INCLUDED
+#ifndef SOMELOGTOPICS_H_INCLUDED
+#define SOMELOGTOPICS_H_INCLUDED
 
-#include <cstdint>
+#include "Log.h"
 
 namespace nowtech {
+namespace SomeLogTopicNamespace { 
 
-  enum class LogApp : uint8_t { // this type is strongly recommended
-    cInvalid, // compulsory value
-    cSystem,
-    cReceive,
-    cTransmit,
-    cError
-  };
+extern LogTopicInstance system;
+extern LogTopicInstance watchdog;
+extern LogTopicInstance selfTest;
 
 }
+}
 
-#endif /* NOWTECH_LOGAPP_H_INCLUDED */
+#endif /* SOMELOGTOPICS_H_INCLUDED */
 ```
+
+SomeLogTopicNamespace
+
+While the .cpp file
+
+```cpp
+#include "LogTopics.h"
+
+nowtech::LogTopicInstance nowtech::SomeLogTopicNamespace::system;
+nowtech::LogTopicInstance nowtech::SomeLogTopicNamespace::watchdog;
+nowtech::LogTopicInstance nowtech::SomeLogTopicNamespace::selfTest;
+```
+
 
 ### The class operates roughly as follows:
 
@@ -151,13 +162,13 @@ The following steps are required to initialize the log system:
     This instance should not be destructed.
 2.  Create an object of the desired `Nowtech::LogOsInterface` subclass. This instance should not be destructed.
 3.  Create the Log instance using the above two objects. This instance should not be destructed.
-4.  Register the required topics or application areas to let only a
-    subset of logs be printed using `Log::registerApp`. These are enum
-    values, and can be defined in `nowtech::LogApp` in the application-specific file _LogApp.h_ For example, if
-    you have there `System`, `Connection` and `Watchdog` defined, and
-    you only register `Connection` and `Watchdog`, all the calls
-    starting with `Log::send(nowtech::LogApp::cSystem` will be
-    discarded.
+4.  Register the required topics using `Log::registerTopic` to let only a
+    subset of logs be printed. These variables of type `nowtech::LogTopicInstance` are defined in various parts of the whole application, even in libraries. For example, if
+    you have there `system`, `connection` and `watchdog` defined, and
+    you only register `connection` and `watchdog`, all the calls
+    starting with `Log::send(nowtech::SomeLogTopicNameSpace::system` will be
+    discarded. Registration is performed like `Log::registerTopic(nowtech::SomeLogTopicNamespace::system, "system");`
+
 5.  Call `Log::registerCurrentTask();` in all the tasks you want to log
     from. This is necessary for the log system to avoid message interleaving from different tasks.
 
@@ -225,24 +236,25 @@ allowVariadicTemplatesWork|bool|true    |If false, the variadic template calls (
 The API has for static method templates, which lets the log system be
 called from any place in the application:
 
-  - `static void send(LogApp aApp, Args... args) noexcept;`
+  - `static void send(LogTopicType aTopic, Args... args) noexcept;`
   - `static void send(Args... args) noexcept;`
-  - `static void sendNoHeader(Args... args) noexcept;`
+  - `static void sendNoHeader(LogTopicType aTopic, Args... args) noexcept;`
   - `static void sendNoHeader(Args... args) noexcept;`
 
 The ones with the name `send` behave according to the stored configuration and the actual parameter list.
 The ones with the name `sendNoHeader` skip printing a header, if any defined in the config.
-The ones receiving the `LogApp` parameter will emit the message
-preceded by the string used to register the given `LogApp = ;`parameter
+The ones receiving the `LogTopicType` parameter will emit the message
+preceded by the string used to register the given `LogTopicInstance` parameter
 if it was actually registered. If not, the whole message is discarded.
-The ones without the `LogApp` parameter will emit the message
+Passing the `LogTopicInstance` variables is not possible, but this class has an overloaded * paramerer to return the contained `LogTopicType` value.
+The ones without the `LogTopicType` parameter will emit the message
 unconditionally.
 
 Examples:
 ```cpp
-Log::send(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+Log::send(*nowtech::SomeLogTopicNamespace::system, "uint64: ", uint64, " int64: ", int64);
 Log::send("uint64: ", uint64, " int64: ", int64);
-Log::sendNoHeader(nowtech::LogApp::cSystem, "uint64: ", uint64, " int64: ", int64);
+Log::sendNoHeader(*nowtech::SomeLogTopicNamespace::system, "uint64: ", uint64, " int64: ", int64);
 Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
 ```
 
@@ -251,20 +263,20 @@ Log::sendNoHeader("uint64: ", uint64, " int64: ", int64);
 The following entry points are available:
   - Singleton access:
     - `static LogShiftChainHelper i() noexcept;` -- prints header, logs unconditionally
-    - `static LogShiftChainHelper i(LogApp const aApp) noexcept;` -- logs with header if the app is enabled
+    - `static LogShiftChainHelper i(LogTopicType const aTopic) noexcept;` -- logs with header if the topic is enabled
     - `static LogShiftChainHelper n() noexcept;` -- doesn't print header, logs unconditionally
-    - `static LogShiftChainHelper n(LogApp const aApp) noexcept;` -- logs without header if the app is enabled
+    - `static LogShiftChainHelper n(LogTopicType const aTopic) noexcept;` -- logs without header if the topic is enabled
   - Member access (no header surpression possible):
     - `LogShiftChainHelper operator<<(ArgumentType const aValue) noexcept;` -- not recommended, the singleton version will avoid unnecessary template instantiations
-    - `LogShiftChainHelper operator<<(LogApp const aApp) noexcept;` -- logs with header if the app is enabled
+    - `LogShiftChainHelper operator<<(LogTopicType const aTopic) noexcept;` -- logs with header if the topic is enabled
     - `LogShiftChainHelper operator<<(LogFormat const &aFormat) noexcept;` -- logs with header unconditionally
     - `LogShiftChainHelper operator<<(LogShiftChainMarker const aMarker) noexcept;` -- just for fun, does nothing
 
-Due to operator overloading, static access is not available, so the Log instance has to be required:
+The class `LogTopicInstance` has an overloaded cast operator to `LogTopicType` so it can be passed directly. Due to operator overloading, static access is not available, so the Log instance has to be required:
 
 ```cpp
 Log::i() << uint8 << ' ' << int8 << Log::end;
-Log::i() << nowtech::LogApp::cSystem << uint8 << ' ' << int8 << Log::end;
+Log::i() << nowtech::SomeLogTopicNamespace::system << uint8 << ' ' << int8 << Log::end;
 Log::i() << LC::cX2 << uint8 << int8 << Log::end;
 Log::i() << Log::end;
 ```
@@ -274,13 +286,13 @@ Log::i() << Log::end;
 This solution even allows distributed construction of a log line. In this example I write 16 bytes to a line in a way that permits arrays with size not multiple of 16 to be written:
 
 ```cpp
-auto log = Log::i(nowtech::LogApp::cSystem);
+auto log = Log::i(nowtech::SomeLogTopicNamespace::system);
 int32_t i;
 for(i = 0; i < chunkLengthOut; ++i) {
   if(i > 0 && i % 16 == 0) {
     log << Log::end;
     // some wait may be needed for long arrays
-    log = Log::i(nowtech::LogApp::cSystem);
+    log = Log::i(nowtech::SomeLogTopicNamespace::system);
   }
   else { // nothing to do
   }
@@ -362,7 +374,6 @@ One of these headers, and if present the related .cpp is also needed:
   - logstdthreadostream.cpp
 
 _**Missing** files are_:
-  - logapp.h   - application-specific.
   - stm32hal.h - this is a placeholder for a set of includes like `stm32f215xx.h`, `stm32f2xx_hal.h`, `stm32f2xx_ll_utils.h` for a given MCU.
   - stm32utils.h which should contain a function for interrupt testing, like
 

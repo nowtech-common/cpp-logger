@@ -203,7 +203,7 @@ allowRegistrationLog|bool|true          |If true, task registration will be sent
 allowShiftChainingCalls|bool|true       |True means reserving a buffer of 256 * chunkSize characters to let the `std::ostream`-like calls work. Setting it false will let such calls compile, but they won't do anything.
 allowVariadicTemplatesWork|bool|true    |If false, the variadic template calls (send... and sendNoHeader...) will be placed, but return immediately without doing anything at all. This is useful to remind the developer working with limited stack to use the shift chain calls.
 `logFromIsr`|bool       |false          |If false, log calls from ISR are discarded. If true, logging from ISR works. However, in this mode the message may be truncated if the actual free space in the queue is too small.
-`chunkSize`|uint32_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\n' signs the end of a message.
+`chunkSize`|uint32_t    |8              |Total message chunk size to use in queue and buffers. The net capacity is one less, because the task ID takes a character. Messages are not handled as a string of characters, but as a series of chunks. '\\r' signs the end of a message.
 `queueLength`|uint32_t  |64             |Length of a queue in chunks. Increasing this value decreases the probability of message truncation when the queue stores more chunks.
 `circularBufferLength`|uint32_t|64      |Length of the circular buffer used for message sorting, measured also in chunks. This should have the same length as the queue, but one can experiment with it.
 `transmitBufferLength`|uint32_t|32      |Length of a buffer in the transmission double-buffer pair, in chunks. This should have half the length as the queue, but one can experiment with it. To be absolutely sure, this can have the same length as the queue, and the log system will also manage bursts of logs.
@@ -307,7 +307,7 @@ Type        |Printed value          |If it can be preceded by a LogFormat parame
 ------------|-----------------------|-------------------------------------------------------------------
 `bool`      |false / true           |no
 `char`      |the character          |no
-`char*`     |the 0 terminated string|no
+`char*`     |the 0 terminated string, \r characters not allowed|no
 `uint8_t`   |formatted numeric value|yes
 `uint16_t`  |formatted numeric value|yes
 `uint32_t`  |formatted numeric value|yes

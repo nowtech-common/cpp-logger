@@ -74,7 +74,13 @@ nowtech::TransmitBuffers &nowtech::TransmitBuffers::operator<<(nowtech::Chunk co
     LogSizeType &index = mIndex[mBufferToWrite];
     while(!mWasTerminalChunk && i < mChunkSize) {
       buffer[index] = origin[i];
-      mWasTerminalChunk = origin[i] == '\n';
+      if (origin[i] == Chunk::cEndOfMessage) {
+        mWasTerminalChunk = true;
+        buffer[index] = Chunk::cEndOfLine;
+      }
+      else {
+        mWasTerminalChunk = false;
+      }
       ++i;
       ++index;
     }

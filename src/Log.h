@@ -156,7 +156,7 @@ namespace nowtech {
 
     /// Total message chunk size to use in queue and buffers. The net capacity is
     /// one less, because the task ID takes a character. Messages are not handled
-    /// in characters os as a string, but as chunks. \n signs the end of a message.
+    /// in characters os as a string, but as chunks. \r signs the end of a message.
     LogSizeType chunkSize = 8u;
 
     /// Length of a FreeRTOS queue in chunks.
@@ -333,6 +333,8 @@ namespace nowtech {
   class Chunk final {
   public:
     static constexpr TaskIdType cInvalidTaskId = 0u;
+    static constexpr char       cEndOfMessage  = '\r';
+    static constexpr char       cEndOfLine     = '\n';
     /// Artificial task ID for interrupts.
     static constexpr TaskIdType cIsrTaskId = std::numeric_limits<TaskIdType>::max();
 
@@ -438,7 +440,7 @@ namespace nowtech {
     void push(char const mChar) noexcept;
 
     void flush() noexcept {
-      mChunk[mIndex] = '\n';
+      mChunk[mIndex] = cEndOfMessage;
       mOsInterface->push(mChunk, mBlocks);
       mIndex = 1u;
     }
@@ -459,7 +461,7 @@ namespace nowtech {
   };
 
   class LogShiftChainHelper final {
-    Log * const mLog;
+    Log *       mLog;
     Chunk       mAppender;
     LogFormat   mNextFormat;
 

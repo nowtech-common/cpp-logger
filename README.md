@@ -306,7 +306,7 @@ Available parameter types to print:
 Type        |Printed value          |If it can be preceded by a LogFormat parameter to change the style
 ------------|-----------------------|-------------------------------------------------------------------
 `bool`      |false / true           |no
-`char`      |the character          |no
+`char`      |the character, \r character not allowed           |no
 `char*`     |the 0 terminated string, \r characters not allowed|no
 `uint8_t`   |formatted numeric value|yes
 `uint16_t`  |formatted numeric value|yes

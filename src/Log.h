@@ -341,12 +341,12 @@ namespace nowtech {
 
   private:
     LogOsInterface *mOsInterface;
-    char * const mOrigin;
+    char * mOrigin;
     char * mChunk;
-    LogSizeType const mChunkSize;
-    LogSizeType const mBufferBytes;
+    LogSizeType mChunkSize;
+    LogSizeType mBufferBytes;
     LogSizeType mIndex = 1;
-    bool const mBlocks;
+    bool mBlocks;
 
   public:
     Chunk() noexcept
@@ -357,6 +357,8 @@ namespace nowtech {
       , mBufferBytes(0u)
       , mBlocks(true) {
     }
+
+    Chunk(Chunk const& aChunk) noexcept = default;
 
     Chunk(LogOsInterface * const aOsInterface, char * const aChunk, LogSizeType const aBufferLength) noexcept
       : mOsInterface(aOsInterface)
@@ -423,13 +425,15 @@ namespace nowtech {
       return *this;
     }
 
-    Chunk& operator=(Chunk const &aChunk) noexcept {
+    Chunk& operator=(Chunk const& aChunk) noexcept {
       mIndex = 1u;
-      for(LogSizeType i = 0u; i < mChunkSize; i++) {
+      for (LogSizeType i = 0u; i < mChunkSize; i++) {
         mChunk[i] = aChunk.mChunk[i];
       }
       return *this;
     }
+
+    Chunk& operator=(Chunk&& aChunk) noexcept;
 
     void invalidate() noexcept {
       mIndex = 1u;

@@ -24,6 +24,20 @@
 #include "Log.h"
 #include "LogUtil.h"
 
+nowtech::Chunk& nowtech::Chunk::operator=(nowtech::Chunk&& aChunk) noexcept {
+  mOsInterface = aChunk.mOsInterface;
+  mOrigin = aChunk.mOrigin;
+  mChunk = aChunk.mChunk;
+  mChunkSize = aChunk.mChunkSize;
+  mBufferBytes = aChunk.mBufferBytes;
+  mBlocks = aChunk.mBlocks;
+  mIndex = aChunk.mIndex;
+  aChunk.mOsInterface = nullptr;
+  aChunk.mOrigin = nullptr;
+  aChunk.mChunk = nullptr;
+  return *this;
+}
+
 void nowtech::Chunk::push(char const mChar) noexcept {
   mChunk[mIndex] = mChar;
   ++mIndex;
